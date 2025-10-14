@@ -30,15 +30,16 @@ export default function StaffDashboard() {
   useEffect(() => {
     loadOrders();
     
-    // Real-time subscription for new orders
+    // Real-time subscription for new orders and updates
     const subscription = supabase
       .channel('orders')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'orders' },
         (payload) => {
           playNotificationSound();
-          setOrders(prev => [payload.new, ...prev]);
-          updateStats();
+          // Prepend new orders to the list for immediate visibility
+          setOrders(prev => [payload.new, ...prev]); 
+          updateStats([payload.new, ...orders]); // Pass updated list to stats
         }
       )
       .on('postgres_changes',
@@ -69,7 +70,7 @@ export default function StaffDashboard() {
 
       if (error) throw error;
       setOrders(data || []);
-      updateStats(data);
+      updateStats(data); // Initial stats update with fetched data
     } catch (err) {
       console.error('Error loading orders:', err);
     } finally {
@@ -77,21 +78,26 @@ export default function StaffDashboard() {
     }
   };
 
-  const updateStats = async (ordersData = null) => {
-    const data = ordersData || orders;
+  const updateStats = (ordersData = null) => {
+    // Use the provided data or the current state if no data is provided
+    const data = ordersData || orders; 
     const today = new Date().toISOString().split('T')[0];
     
+    // Ensure all necessary properties are available before filtering/reducing
     const todayOrders = data.filter(o => 
-      o.created_at?.startsWith(today) && o.status !== 'cancelled'
+      o.created_at?.startsWith(today) && o.status !== 'cancelled' && o.total != null
     );
 
-    setStats({
+    // Recalculate stats based on the latest data
+    const newStats = {
       pending: data.filter(o => o.status === 'pending').length,
       preparing: data.filter(o => o.status === 'preparing').length,
       ready: data.filter(o => o.status === 'ready').length,
       todayTotal: todayOrders.length,
       todayRevenue: todayOrders.reduce((sum, o) => sum + (o.total || 0), 0),
-    });
+    };
+    
+    setStats(newStats);
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
@@ -187,7 +193,7 @@ export default function StaffDashboard() {
             </div>
             <div className="bg-pink-500/20 rounded-lg p-3 border border-pink-500/50">
               <div className="text-pink-300 text-sm">Today's Revenue</div>
-              <div className="text-2xl font-bold text-white">₱{stats.todayRevenue}</div>
+              <div className="text-2xl font-bold text-white">₱{stats.todayRevenue.toFixed(2)}</div>
             </div>
           </div>
         </div>
@@ -273,17 +279,19 @@ export default function StaffDashboard() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-400">₱{order.total}</div>
+                      <div className="text-2xl font-bold text-green-400">₱{order.total?.toFixed(2) || '0.00'}</div>
                       <div className="text-purple-300 text-sm">{order.payment_method}</div>
                     </div>
                   </div>
 
-                  {/* Order Items */}
+                  {/* Order Items - ENHANCED to show option label */}
                   <div className="bg-purple-900/30 rounded-lg p-3 mb-4">
                     <h4 className="text-white font-semibold mb-2">Items:</h4>
                     {order.items?.map((item, idx) => (
                       <div key={idx} className="flex justify-between text-purple-200 text-sm mb-1">
-                        <span>{item.quantity}x {item.name} ({item.code})</span>
+                        <span className="font-medium">{item.quantity}x {item.name} 
+                            <span className="text-purple-400 ml-1">({item.option || 'Regular'})</span>
+                        </span>
                         <span className="text-green-400">₱{(item.price * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
@@ -341,3 +349,4 @@ export default function StaffDashboard() {
     </div>
   );
 }
+

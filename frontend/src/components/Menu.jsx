@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Minus, X } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, X, Check, Coffee, Utensils, Zap } from 'lucide-react';
 // Import 'useSearchParams' for table number URL detection
 import { useSearchParams } from 'react-router-dom';
 
@@ -22,11 +22,119 @@ const CATEGORIES = [
   { id: 'lemonade', icon: '🍋', label: 'Lemonade' },
   { id: 'smoothies', icon: '🍓', label: 'Smoothies' },
   { id: 'buckets', icon: '🍻', label: 'Buckets' },
-  { id: 'alcohol', icon: '🥃', label: 'Alcohol' }, // Added common category
-  { id: 'coffee', icon: '☕', label: 'Coffee' }, // Added common category
+  { id: 'alcohol', icon: '🥃', label: 'Alcohol' }, 
+  { id: 'coffee', icon: '☕', label: 'Coffee' },
 ];
 
+// --- Checkout Modal Component (Integrated) ---
+const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }) => {
+    const [customerName, setCustomerName] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if ((orderType === 'dine-in' && !tableNumber) || !customerName.trim()) {
+            alert('Please enter your name and ensure table number is set for dine-in.'); 
+            return;
+        }
+        setIsSubmitting(true);
+        // Call the parent function with captured data
+        await onSubmitOrder({ customerName, paymentMethod });
+        setIsSubmitting(false);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-4 border-b pb-3">
+                        <h2 className="text-2xl font-bold text-gray-800">Confirm Order</h2>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit}>
+                        {/* Order Context */}
+                        <div className="mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                            <p className="text-lg font-semibold text-indigo-700">Type: {orderType === 'dine-in' ? `Dine In (Table: ${tableNumber})` : 'Takeout'}</p>
+                        </div>
+
+                        {/* Customer Name Input */}
+                        <div className="mb-4">
+                            <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                            <input
+                                id="customerName"
+                                type="text"
+                                value={customerName}
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                                placeholder="e.g., Jane Smith"
+                                required
+                            />
+                        </div>
+
+                        {/* Payment Method Selection */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                            <div className="flex gap-4">
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="payment"
+                                        value="Cash"
+                                        checked={paymentMethod === 'Cash'}
+                                        onChange={() => setPaymentMethod('Cash')}
+                                        className="form-radio text-pink-600 h-5 w-5"
+                                    />
+                                    <span className="text-gray-700">Cash</span>
+                                </label>
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="payment"
+                                        value="Card"
+                                        checked={paymentMethod === 'Card'}
+                                        onChange={() => setPaymentMethod('Card')}
+                                        className="form-radio text-pink-600 h-5 w-5"
+                                    />
+                                    <span className="text-gray-700">Card (Debit/Credit)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Order Summary */}
+                        <div className="flex justify-between items-center text-xl font-bold text-gray-900 border-t pt-3">
+                            <span>Total:</span>
+                            <span className="text-pink-600">₱{total.toFixed(2)}</span>
+                        </div>
+                        
+                        {/* Submit Button */}
+                        <button
+                            type="submit"
+                            className={`w-full mt-6 py-3 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 
+                                ${isSubmitting ? 'bg-gray-400' : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'}`}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <span className="animate-spin h-5 w-5">⏳</span>
+                            ) : (
+                                <>
+                                    <Check className="w-5 h-5" />
+                                    Place Order (₱{total.toFixed(2)})
+                                </>
+                            )}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main Menu Component ---
 export default function Menu() {
   const [searchParams] = useSearchParams();
   const [menuItems, setMenuItems] = useState([]);
@@ -34,6 +142,8 @@ export default function Menu() {
   const [activeCategory, setActiveCategory] = useState('grilled');
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [orderConfirmed, setOrderConfirmed] = useState(false); 
   
   // Set initial state from URL query, e.g., ?table=5
   const initialTable = searchParams.get('table') || '';
@@ -81,7 +191,6 @@ export default function Menu() {
       if (cached) {
         setMenuItems(JSON.parse(cached));
       } else {
-        // Show error message if no data is available
         alert("Failed to load menu. Check network connection or Supabase keys.");
       }
     } finally {
@@ -122,7 +231,6 @@ export default function Menu() {
   };
 
   const updateQuantity = (cartItemId, change) => {
-    // ... (Your updateQuantity logic remains unchanged)
     setCart(prev => {
       const updated = prev.map(item => {
         if (item.id === cartItemId) {
@@ -136,7 +244,6 @@ export default function Menu() {
   };
 
   const removeFromCart = (cartItemId) => {
-    // ... (Your removeFromCart logic remains unchanged)
     setCart(prev => prev.filter(item => item.id !== cartItemId));
   };
 
@@ -144,25 +251,16 @@ export default function Menu() {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  // --- Order Submission ---
-  const submitOrder = async () => {
+  // --- Order Submission (Updated to use the new customer_name column) ---
+  const handlePlaceOrder = async ({ customerName, paymentMethod }) => {
     
-    // Simple Guest Checkout (as per RLS policy: Anyone can INSERT)
-    // We don't need to check for Supabase user auth for guest checkout.
-    
-    if (orderType === 'dine-in' && !tableNumber) {
-        alert('Please enter your table number.');
-        return;
-    }
-    if (cart.length === 0) {
-        alert('Your cart is empty.');
-        return;
-    }
+    if (cart.length === 0) return;
 
     try {
         const orderData = {
-            // customer_id is NULL for guest checkout
-            customer_name: 'Guest', // Placeholder
+            // This is the clean, correct column name after running the SQL script
+            customer_name: customerName, 
+            
             order_type: orderType,
             table_number: orderType === 'dine-in' ? tableNumber : null,
             
@@ -180,14 +278,16 @@ export default function Menu() {
             tax: 0,
             total: getCartTotal(),
             status: 'pending', // Default status
-            payment_method: 'cash',
+            
+            // Use payment method captured in the modal (converted to lowercase for DB CHECK constraint)
+            payment_method: paymentMethod.toLowerCase(), 
             payment_status: 'pending',
         };
-
+        
         const { data, error } = await supabase
             .from('orders')
             .insert([orderData])
-            .select('id') // Just fetch ID to confirm success
+            .select('id') 
             .single();
 
         if (error) throw error;
@@ -195,14 +295,12 @@ export default function Menu() {
         // Success actions
         setCart([]); // Clear cart
         localStorage.removeItem('sipnsing_cart'); // Clear storage
-        setShowCart(false); // Close modal
-        
-        // Use a less intrusive success message
-        alert(`Order successfully placed! Please wait for our staff.`); 
+        setShowCheckoutModal(false); // Close the modal
+        setOrderConfirmed(true); // Show confirmation banner
         
     } catch (err) {
         console.error('Error placing order:', err);
-        alert('Failed to place order. Please try again. Error: ' + err.message);
+        alert('Failed to place order. Please try again. Error: ' + err.message); 
     }
   };
 
@@ -292,18 +390,29 @@ export default function Menu() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-center sticky top-0 z-50 shadow-lg">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-center sticky top-0 z-40 shadow-lg">
         <h1 className="text-3xl font-bold text-white mb-1">🎤 Sip & Sing Restobar</h1>
         <p className="text-purple-100 text-sm">Delicious Food • Refreshing Drinks • Great Vibes</p>
-        {initialTable && orderType === 'dine-in' && (
+        {tableNumber && orderType === 'dine-in' && (
           <p className="text-yellow-300 text-base mt-2">
-            Ordering for Table **{initialTable}**
+            Ordering for Table **{tableNumber}**
           </p>
         )}
       </div>
 
+      {/* Success Banner */}
+      {orderConfirmed && (
+        <div className="bg-green-600 p-3 text-center sticky top-[88px] z-30 flex justify-center items-center gap-3">
+          <Check className="w-5 h-5" />
+          <span className="font-semibold text-white">Order placed successfully! Staff notified.</span>
+          <button onClick={() => setOrderConfirmed(false)} className="text-white opacity-70 hover:opacity-100 ml-auto">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       {/* Category Nav */}
-      <div className="sticky top-[88px] z-40 bg-purple-800/90 backdrop-blur-sm overflow-x-auto flex gap-2 p-3 scrollbar-hide">
+      <div className="sticky top-[88px] z-20 bg-purple-800/90 backdrop-blur-sm overflow-x-auto flex gap-2 p-3 scrollbar-hide">
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
@@ -340,10 +449,10 @@ export default function Menu() {
         })}
       </div>
 
-      {/* Cart Button (Unchanged) */}
+      {/* Cart Button */}
       <button
         onClick={() => setShowCart(true)}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-pink-500 to-purple-500 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-50"
+        className="fixed bottom-6 right-6 bg-gradient-to-r from-pink-500 to-purple-500 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-30"
       >
         <ShoppingCart className="w-6 h-6" />
         {cart.length > 0 && (
@@ -353,9 +462,9 @@ export default function Menu() {
         )}
       </button>
 
-      {/* Cart Modal (Unchanged) */}
+      {/* Cart Modal / Sidebar */}
       {showCart && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end md:items-center justify-center">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-end md:items-center justify-center">
           <div className="bg-gradient-to-br from-purple-900 to-indigo-900 w-full md:max-w-2xl md:rounded-t-3xl md:rounded-b-3xl max-h-[90vh] overflow-y-auto">
             {/* Cart Header */}
             <div className="sticky top-0 bg-purple-800 p-5 flex justify-between items-center border-b border-purple-700">
@@ -382,7 +491,7 @@ export default function Menu() {
                   onClick={() => setOrderType('takeout')}
                   className={`flex-1 py-3 rounded-lg font-semibold ${
                     orderType === 'takeout'
-                      ? 'bg-takeout'
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
                       : 'bg-purple-800 text-purple-300'
                   }`}
                 >
@@ -393,7 +502,7 @@ export default function Menu() {
               {orderType === 'dine-in' && (
                 <input
                   type="text"
-                  placeholder="Table Number"
+                  placeholder="Table Number (e.g. A2)"
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
                   className="w-full p-3 rounded-lg bg-purple-800 text-white border border-purple-600 focus:border-pink-500 focus:outline-none"
@@ -447,9 +556,17 @@ export default function Menu() {
                   <span className="text-2xl font-bold text-green-400">₱{getCartTotal().toFixed(2)}</span>
                 </div>
                 <button
-                  onClick={submitOrder}
-                  disabled={orderType === 'dine-in' && !tableNumber}
+                  // This button opens the checkout modal
+                  onClick={() => {
+                      if (orderType === 'dine-in' && !tableNumber) {
+                          alert('Please enter your table number for a dine-in order.');
+                          return;
+                      }
+                      setShowCart(false);
+                      setShowCheckoutModal(true);
+                  }}
                   className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={cart.length === 0}
                 >
                   Place Order
                 </button>
@@ -458,6 +575,18 @@ export default function Menu() {
           </div>
         </div>
       )}
+      
+      {/* Checkout Modal Render */}
+      {showCheckoutModal && (
+        <CheckoutModal 
+            total={getCartTotal()}
+            orderType={orderType}
+            tableNumber={tableNumber}
+            onClose={() => setShowCheckoutModal(false)}
+            onSubmitOrder={handlePlaceOrder}
+        />
+      )}
     </div>
   );
 }
+
