@@ -1,6 +1,21 @@
 import React from 'react';
-import Menu from './components/Menu';
+// These components will be created/updated next
+import Menu from './components/Menu'; 
+import StaffDashboard from './components/StaffDashboard'; 
 
+/**
+ * Main application entry point handling simple routing
+ * based on the window's URL path.
+ */
 export default function App() {
-  return <Menu />;
+  // Checks if the user is accessing the /staff route
+  const isStaffView = window.location.pathname.startsWith('/staff');
+
+  return (
+    <>
+      {/* Renders the Staff Dashboard component if the path is /staff, 
+          otherwise renders the Customer Menu component */}
+      {isStaffView ? <StaffDashboard /> : <Menu />}
+    </>
+  );
 }
