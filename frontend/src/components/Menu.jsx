@@ -1,3 +1,4 @@
+===== Menu.jsx =====
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, X, Check, Coffee, Utensils, Zap } from 'lucide-react';
 // Import 'useSearchParams' for table number URL detection
@@ -334,6 +335,74 @@ export default function Menu() {
 
   // --- Render Menu Items and Options ---
   const renderMenuItem = (item) => {
+  const hasOptions = item.options && item.options.length > 0;
+  
+  // Fallback image if item.image_url is null/broken
+  const fallbackImage = 'https://via.placeholder.com/300x200/4B0082/FFFFFF?text=' + encodeURIComponent(item.name);
+  const imageUrl = item.image_url || fallbackImage;
+  
+  return (
+    <div
+      key={item.id}
+      className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm border border-purple-500/30 rounded-xl overflow-hidden hover:border-pink-500/50 transition-all"
+    >
+      {/* NEW: Image Section */}
+      <div className="relative h-48 bg-purple-900/30 overflow-hidden">
+        <img
+          src={imageUrl}
+          alt={item.name}
+          className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+          onError={(e) => {
+            // If image fails to load, use fallback
+            e.target.src = fallbackImage;
+          }}
+        />
+        {/* Code badge overlay */}
+        <div className="absolute top-2 left-2 bg-pink-500/90 text-white px-2 py-1 rounded-md text-xs font-bold">
+          {item.code}
+        </div>
+      </div>
+
+      {/* Existing content with adjusted padding */}
+      <div className="p-4">
+        <h3 className="text-lg font-bold text-white">{item.name}</h3>
+        {item.description && (
+          <p className="text-purple-200 text-sm mt-1">{item.description}</p>
+        )}
+
+        {/* Rest of your existing code... */}
+        {hasOptions ? (
+          <div className="mt-3 space-y-2">
+            {item.options.map(option => (
+              <div key={option.id} className="flex justify-between items-center py-1 border-t border-purple-700/50 first:border-t-0">
+                <span className="text-purple-300 font-medium">{option.label}</span>
+                <div className="flex items-center gap-3">
+                    <span className="text-green-400 font-bold text-base">₱{option.price}</span>
+                    <button
+                      onClick={() => addToCart(item, option)}
+                      className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:shadow-lg transition-all"
+                    >
+                      <Plus className='w-4 h-4' />
+                    </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex justify-between items-center mt-3">
+            <span className="text-green-400 font-bold text-xl">₱{item.base_price}</span>
+            <button
+              onClick={() => addToCart(item)}
+              className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
+            >
+              Add to Cart
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
     // Check if the item has options (variants/sizes)
     const hasOptions = item.options && item.options.length > 0;
     
