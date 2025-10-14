@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, X } from 'lucide-react';
 
-// Supabase client (you'll configure this)
+// Supabase client (for auth only)
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -9,20 +9,17 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 // Category config
 const CATEGORIES = [
   { id: 'grilled', icon: '🥩', label: 'Grilled' },
   { id: 'bestsellers', icon: '⭐', label: 'Best Sellers' },
   { id: 'seafood', icon: '🐟', label: 'Seafood' },
-  { id: 'noodles', icon: '🍜', label: 'Noodles' },
   { id: 'silog', icon: '🍳', label: 'Silog' },
   { id: 'appetizers', icon: '🍟', label: 'Appetizers' },
-  { id: 'soup', icon: '🍲', label: 'Soup' },
   { id: 'lemonade', icon: '🍋', label: 'Lemonade' },
   { id: 'smoothies', icon: '🍓', label: 'Smoothies' },
-  { id: 'coffee', icon: '☕', label: 'Coffee' },
-  { id: 'alcohol', icon: '🍺', label: 'Alcohol' },
-  { id: 'nonalcohol', icon: '🧃', label: 'Drinks' },
   { id: 'buckets', icon: '🍻', label: 'Buckets' },
 ];
 
@@ -32,32 +29,36 @@ export default function Menu() {
   const [activeCategory, setActiveCategory] = useState('grilled');
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
-  const [orderType, setOrderType] = useState('dine-in'); // 'dine-in' or 'takeout'
+  const [orderType, setOrderType] = useState('dine-in');
   const [tableNumber, setTableNumber] = useState('');
 
-  // Load menu from Supabase
+  // Load menu from backend API
   useEffect(() => {
     loadMenu();
   }, []);
 
   const loadMenu = async () => {
     try {
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select(`
-          *,
-          options:menu_item_options(*)
-        `)
-        .eq('available', true)
-        .order('code');
-
-      if (error) throw error;
+      // Fetch from backend API with trailing slash
+      const response = await fetch(`${API_URL}/api/menu/`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
       setMenuItems(data || []);
+      
+      // Cache for offline use
+      localStorage.setItem('sipnsing_menu', JSON.stringify(data));
     } catch (err) {
       console.error('Error loading menu:', err);
+      
       // Fallback to localStorage for offline
       const cached = localStorage.getItem('sipnsing_menu');
-      if (cached) setMenuItems(JSON.parse(cached));
+      if (cached) {
+        setMenuItems(JSON.parse(cached));
+      }
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ export default function Menu() {
       item_id: item.id,
       code: item.code,
       name: item.name,
-      option_label: option?.label || 'Regular',
+      option_label: option?.name || 'Regular',
       price: option?.price || item.base_price,
       quantity: 1,
     };
@@ -77,8 +78,8 @@ export default function Menu() {
     setCart(prev => {
       const existing = prev.find(i => i.id === cartItem.id);
       if (existing) {
-        return prev.map(i => 
-          i.id === cartItem.id 
+        return prev.map(i =>
+          i.id === cartItem.id
             ? { ...i, quantity: i.quantity + 1 }
             : i
         );
@@ -111,7 +112,7 @@ export default function Menu() {
   const submitOrder = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         alert('Please sign in to place an order');
         return;
@@ -144,10 +145,9 @@ export default function Menu() {
 
       if (error) throw error;
 
-      // Clear cart
       setCart([]);
       setShowCart(false);
-      
+
       alert(`Order placed! Order #${data.order_number}`);
     } catch (err) {
       console.error('Error placing order:', err);
@@ -218,7 +218,7 @@ export default function Menu() {
                 <span className="text-3xl">{category.icon}</span>
                 {category.label.toUpperCase()}
               </h2>
-              
+
               <div className="grid gap-4">
                 {items.map(item => (
                   <div
@@ -235,38 +235,16 @@ export default function Menu() {
                       </div>
                     </div>
 
-                    {/* Options/Prices */}
-                    {item.options && item.options.length > 0 ? (
-                      <div className="space-y-2 mt-3">
-                        {item.options.map(opt => (
-                          <div
-                            key={opt.id}
-                            className="flex justify-between items-center bg-purple-900/30 rounded-lg p-3"
-                          >
-                            <span className="text-purple-100 text-sm">{opt.label}</span>
-                            <div className="flex items-center gap-3">
-                              <span className="text-green-400 font-bold">₱{opt.price}</span>
-                              <button
-                                onClick={() => addToCart(item, opt)}
-                                className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-2 rounded-lg hover:shadow-lg transition-all"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center mt-3">
-                        <span className="text-green-400 font-bold text-xl">₱{item.base_price}</span>
-                        <button
-                          onClick={() => addToCart(item)}
-                          className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
-                        >
-                          Add to Cart
-                        </button>
-                      </div>
-                    )}
+                    {/* Price and Add to Cart */}
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="text-green-400 font-bold text-xl">₱{item.base_price}</span>
+                      <button
+                        onClick={() => addToCart(item)}
+                        className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

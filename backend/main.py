@@ -27,10 +27,12 @@ from src.data.database import db_manager
 from src.ai.ai_engine import ai_engine
 from src.data.peewee_models import create_tables
 from src.api.routes import contacts, messages, feedback, health
+from src.routers import menu
 from src.core.exceptions import AppException, ValidationException
 from src.data.schemas import HealthCheck, ErrorResponse
 
 # ------------------------
+from src.routers import menu
 # Logging setup
 # ------------------------
 if os.environ.get("UVICORN_RELOADER") != "1":
@@ -183,6 +185,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 # Include API routers
 # ------------------------
 # app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(menu.router, prefix="/api/menu", tags=["Menu"])
 app.include_router(contacts.router, prefix="/api/contacts", tags=["Contacts"])
 app.include_router(messages.router, prefix="/api/messages", tags=["Messages"])
 app.include_router(feedback.router, prefix="/api/feedback", tags=["Feedback"])

@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-url = os.getenv("VITE_SUPABASE_URL")
+url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 supabase: Client = create_client(url, key)
 
@@ -375,8 +375,8 @@ def seed_menu():
     
     # Clear existing menu (optional - comment out if you want to keep existing data)
     print("🧹 Clearing existing menu...")
-    supabase.table("menu_item_options").delete().neq("id", "").execute()
-    supabase.table("menu_items").delete().neq("id", "").execute()
+    supabase.table("menu_item_options").delete().gte("created_at", "1970-01-01").execute()
+    supabase.table("menu_items").delete().gte("created_at", "1970-01-01").execute()
     
     for item_data in MENU_DATA:
         options = item_data.pop("options", [])
