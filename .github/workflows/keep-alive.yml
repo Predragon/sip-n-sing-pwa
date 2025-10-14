@@ -1,32 +1,28 @@
-# .github/workflows/keep-alive.yml
-name: Keep Render Service Alive
+name: Keep Sip & Sing Backend Alive
 
 on:
   schedule:
-    # Run every 10 minutes (cron format: minute hour day month day-of-week)
+    # Run every 10 minutes
     - cron: '*/10 * * * *'
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch: # Allow manual trigger from GitHub
 
 jobs:
   ping-service:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Ping Render Service
+    - name: Ping Sip & Sing Render Service
       run: |
-        echo "Pinging Render service to keep it alive..."
+        echo "$(date): Starting keep-alive ping for Sip & Sing..."
         
-        # Ping the root endpoint
-        curl -f -s https://the-third-voice-mvp.onrender.com/ || echo "Root endpoint failed"
+        # Root endpoint
+        curl -f -s --max-time 10 --retry 3 --retry-delay 5 https://sip-n-sing-pwa.onrender.com/ \
+          || echo "Root endpoint failed after retries"
         
-        # Wait 2 seconds between requests
         sleep 2
         
-        # Ping the health endpoint 
-        curl -f -s https://the-third-voice-mvp.onrender.com/health || echo "Health endpoint failed"
+        # Health endpoint (adjust path if your API uses /api/health)
+        curl -f -s --max-time 10 --retry 3 --retry-delay 5 https://sip-n-sing-pwa.onrender.com/api/health \
+          || echo "Health endpoint failed after retries"
         
-        echo "Keepalive ping completed"
-        
-    - name: Log Status
-      run: |
-        echo "Keepalive job finished at $(date)"
+        echo "$(date): Keepalive ping completed successfully."
