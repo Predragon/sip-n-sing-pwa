@@ -37,6 +37,7 @@ export default function StaffDashboard() {
         (payload) => {
           playNotificationSound();
           setOrders(prev => [payload.new, ...prev]);
+          updateStats();
         }
       )
       .on('postgres_changes',
@@ -47,11 +48,14 @@ export default function StaffDashboard() {
               order.id === payload.new.id ? payload.new : order
             )
           );
+          updateStats();
         }
       )
       .subscribe();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadOrders = async () => {
@@ -72,7 +76,7 @@ export default function StaffDashboard() {
     }
   };
 
-  const updateStats = (ordersData = null) => {
+  const updateStats = async (ordersData = null) => {
     const data = ordersData || orders;
     const today = new Date().toISOString().split('T')[0];
     
@@ -104,10 +108,8 @@ export default function StaffDashboard() {
   };
 
   const playNotificationSound = () => {
-    try {
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjGH0fPTgjMGHm7A7+OZURE');
-      audio.play().catch(() => {});
-    } catch (e) {}
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjGH0fPTgjMGHm7A7+OZURE');
+    audio.play().catch(() => {});
   };
 
   const filteredOrders = orders.filter(order => {
@@ -153,7 +155,7 @@ export default function StaffDashboard() {
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 sticky top-0 z-50 shadow-lg">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold text-white">🎤 Staff Dashboard</h1>
+            <h1 className="text-3xl font-bold text-white">🎤 Sip & Sing - Staff Dashboard</h1>
             <button
               onClick={loadOrders}
               className="bg-purple-700 text-white p-2 rounded-lg hover:bg-purple-600"
@@ -176,11 +178,11 @@ export default function StaffDashboard() {
               <div className="text-2xl font-bold text-white">{stats.ready}</div>
             </div>
             <div className="bg-purple-500/20 rounded-lg p-3 border border-purple-500/50">
-              <div className="text-purple-300 text-sm">Today</div>
+              <div className="text-purple-300 text-sm">Today's Orders</div>
               <div className="text-2xl font-bold text-white">{stats.todayTotal}</div>
             </div>
             <div className="bg-pink-500/20 rounded-lg p-3 border border-pink-500/50">
-              <div className="text-pink-300 text-sm">Revenue</div>
+              <div className="text-pink-300 text-sm">Today's Revenue</div>
               <div className="text-2xl font-bold text-white">₱{stats.todayRevenue}</div>
             </div>
           </div>
@@ -189,19 +191,36 @@ export default function StaffDashboard() {
 
       <div className="bg-purple-800/50 p-3">
         <div className="max-w-7xl mx-auto flex gap-2">
-          {['active', 'completed', 'all'].map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg font-semibold capitalize ${
-                filter === f
-                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
-                  : 'bg-purple-700 text-purple-200'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+          <button
+            onClick={() => setFilter('active')}
+            className={`px-4 py-2 rounded-lg font-semibold ${
+              filter === 'active'
+                ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
+                : 'bg-purple-700 text-purple-200'
+            }`}
+          >
+            Active Orders ({stats.pending + stats.preparing + stats.ready})
+          </button>
+          <button
+            onClick={() => setFilter('completed')}
+            className={`px-4 py-2 rounded-lg font-semibold ${
+              filter === 'completed'
+                ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
+                : 'bg-purple-700 text-purple-200'
+            }`}
+          >
+            Completed
+          </button>
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 rounded-lg font-semibold ${
+              filter === 'all'
+                ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
+                : 'bg-purple-700 text-purple-200'
+            }`}
+          >
+            All Orders
+          </button>
         </div>
       </div>
 
@@ -209,7 +228,7 @@ export default function StaffDashboard() {
         {filteredOrders.length === 0 ? (
           <div className="text-center py-12">
             <ChefHat className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-            <p className="text-purple-300 text-lg">No orders</p>
+            <p className="text-purple-300 text-lg">No orders yet</p>
           </div>
         ) : (
           <div className="grid gap-4">
@@ -220,31 +239,43 @@ export default function StaffDashboard() {
               return (
                 <div
                   key={order.id}
-                  className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-5"
+                  className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-5 hover:border-pink-500/50 transition-all"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <span className={`${statusConfig.color} text-white px-3 py-1 rounded-full text-sm font-bold inline-flex items-center gap-1`}>
-                        <StatusIcon className="w-4 h-4" />
-                        {statusConfig.label}
-                      </span>
-                      <h3 className="text-xl font-bold text-white mt-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`${statusConfig.color} text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1`}>
+                          <StatusIcon className="w-4 h-4" />
+                          {statusConfig.label}
+                        </span>
+                        {order.order_type === 'takeout' && (
+                          <span className="bg-orange-500 text-white px-2 py-1 rounded text-xs font-bold">
+                            TAKEOUT
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-xl font-bold text-white">
                         {order.customer_name}
-                        {order.table_number && <span className="text-pink-400"> • Table {order.table_number}</span>}
+                        {order.table_number && (
+                          <span className="text-pink-400 ml-2">• Table {order.table_number}</span>
+                        )}
                       </h3>
-                      <p className="text-purple-300 text-sm">
+                      <p className="text-purple-300 text-sm flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
                         {formatTime(order.created_at)} ({getTimeSince(order.created_at)})
                       </p>
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-green-400">₱{order.total}</div>
+                      <div className="text-purple-300 text-sm">{order.payment_method}</div>
                     </div>
                   </div>
 
                   <div className="bg-purple-900/30 rounded-lg p-3 mb-4">
+                    <h4 className="text-white font-semibold mb-2">Items:</h4>
                     {order.items?.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm mb-1">
-                        <span className="text-purple-200">{item.quantity}x {item.name}</span>
+                      <div key={idx} className="flex justify-between text-purple-200 text-sm mb-1">
+                        <span>{item.quantity}x {item.name} ({item.code})</span>
                         <span className="text-green-400">₱{(item.price * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
@@ -252,28 +283,44 @@ export default function StaffDashboard() {
 
                   <div className="flex gap-2">
                     {order.status === 'pending' && (
-                      <button
-                        onClick={() => updateOrderStatus(order.id, 'preparing')}
-                        className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold"
-                      >
-                        Start Preparing
-                      </button>
+                      <>
+                        <button
+                          onClick={() => updateOrderStatus(order.id, 'preparing')}
+                          className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition flex items-center justify-center gap-2"
+                        >
+                          <ChefHat className="w-4 h-4" />
+                          Start Preparing
+                        </button>
+                        <button
+                          onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </>
                     )}
                     {order.status === 'preparing' && (
                       <button
                         onClick={() => updateOrderStatus(order.id, 'ready')}
-                        className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold"
+                        className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition flex items-center justify-center gap-2"
                       >
-                        Mark Ready
+                        <Check className="w-4 h-4" />
+                        Mark as Ready
                       </button>
                     )}
                     {order.status === 'ready' && (
                       <button
                         onClick={() => updateOrderStatus(order.id, 'completed')}
-                        className="flex-1 bg-purple-500 text-white py-2 rounded-lg font-semibold"
+                        className="flex-1 bg-purple-500 text-white py-2 rounded-lg font-semibold hover:bg-purple-600 transition flex items-center justify-center gap-2"
                       >
-                        Complete
+                        <Check className="w-4 h-4" />
+                        Complete Order
                       </button>
+                    )}
+                    {order.status === 'completed' && (
+                      <div className="flex-1 text-center text-purple-300 py-2">
+                        Order completed ✓
+                      </div>
                     )}
                   </div>
                 </div>
