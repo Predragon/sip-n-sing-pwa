@@ -2,28 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Vite's recommended default icon link -->
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sip & Sing PWA</title>
-    <!-- Tailwind CSS for styling -->
+    <title>Sip & Sing Staff Dashboard</title>
+    <!-- Tailwind CSS is loaded via script, though often managed by Vite/PostCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Ensure the body takes up the full viewport height */
+      html, body, #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
   </head>
-  <!-- 
-    FIX: Changed bg-gray-50 to bg-gray-900. 
-    This removes the white frame by matching the surrounding background color.
-  -->
-  <body class="bg-gray-900">
-    <!-- 
-      The #root element is set to fill the entire viewport, which is 
-      where the React application with the gradient background mounts. 
-    -->
-    <div id="root" class="w-full min-h-screen">
-        <!-- React App mounts here -->
-    </div>
-    <!-- 
-      CRITICAL: This line links to your main JavaScript entry point.
-    -->
+  <body>
+    <!-- THIS IS THE CRITICAL MOUNT POINT FOR REACT -->
+    <div id="root"></div>
+    
+    <!-- This loads your main React application script -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
