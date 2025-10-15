@@ -1,21 +1,83 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Check, X, ChefHat, Bell, RefreshCw } from 'lucide-react';
+import { Clock, Check, X, ChefHat, Bell, RefreshCw, LogOut, Loader } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
+// --- FIXED: Using Firebase CDN Imports to bypass module resolution errors ---
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+import { getAuth, signInWithCustomToken, signInAnonymously, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import { getFirestore } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+// --- 0. Environment Setup ---
+// Mandatory environment variables provided by the platform
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+// Initialize Firebase (for Auth)
+let firebaseApp;
+let auth;
+let db;
+try {
+    // Only initialize if config is available
+    if (Object.keys(firebaseConfig).length > 0) {
+        firebaseApp = initializeApp(firebaseConfig);
+        auth = getAuth(firebaseApp);
+        db = getFirestore(firebaseApp);
+    } else {
+        console.error("Firebase config is missing.");
+    }
+} catch (error) {
+    console.error("Firebase initialization failed:", error);
+}
+
+// Initialize Supabase (for Data)
+const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  VITE_SUPABASE_URL,
+  VITE_SUPABASE_ANON_KEY
 );
 
+// --- 1. Constants ---
 const STATUS_CONFIG = {
-  pending: { label: 'New Order', color: 'bg-yellow-500', icon: Bell },
-  preparing: { label: 'Preparing', color: 'bg-blue-500', icon: ChefHat },
-  ready: { label: 'Ready', color: 'bg-green-500', icon: Check },
-  completed: { label: 'Completed', color: 'bg-gray-500', icon: Check },
-  cancelled: { label: 'Cancelled', color: 'bg-red-500', icon: X },
+  pending: { label: 'New Order', color: 'bg-yellow-500', icon: Bell, next: 'preparing' },
+  preparing: { label: 'Preparing', color: 'bg-blue-500', icon: ChefHat, next: 'ready' },
+  ready: { label: 'Ready', color: 'bg-green-500', icon: Check, next: 'completed' },
+  completed: { label: 'Completed', color: 'bg-gray-500', icon: Check, next: null },
+  cancelled: { label: 'Cancelled', color: 'bg-red-500', icon: X, next: null },
 };
 
-export default function StaffDashboard() {
+// --- 2. Custom Modal for Confirmation ---
+const ConfirmationModal = ({ order, onConfirm, onCancel }) => {
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm">
+                <div className="p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-2">Confirm Cancellation</h2>
+                    <p className="text-gray-600 mb-4">Are you sure you want to cancel the order for **{order.customer_name}**?</p>
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={onCancel}
+                            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition"
+                        >
+                            No, Keep Order
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"
+                        >
+                            Yes, Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- 3. Core Dashboard Component (The user's logic) ---
+const OrderManager = ({ userId, handleSignOut }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('active'); // 'active', 'completed', 'all'
@@ -26,41 +88,31 @@ export default function StaffDashboard() {
     todayTotal: 0,
     todayRevenue: 0,
   });
+  const [updateError, setUpdateError] = useState(null);
+  const [cancelOrder, setCancelOrder] = useState(null); // State for the order to be confirmed for cancellation
 
-  useEffect(() => {
-    loadOrders();
+  const updateStats = (ordersData) => {
+    const data = ordersData || orders; 
+    const today = new Date().toISOString().split('T')[0];
     
-    // Real-time subscription for new orders and updates
-    const subscription = supabase
-      .channel('orders')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        (payload) => {
-          playNotificationSound();
-          // Prepend new orders to the list for immediate visibility
-          setOrders(prev => [payload.new, ...prev]); 
-          updateStats([payload.new, ...orders]); // Pass updated list to stats
-        }
-      )
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
-        (payload) => {
-          setOrders(prev => 
-            prev.map(order => 
-              order.id === payload.new.id ? payload.new : order
-            )
-          );
-          updateStats();
-        }
-      )
-      .subscribe();
+    // Ensure all necessary properties are available before filtering/reducing
+    const todayOrders = data.filter(o => 
+      o.created_at?.startsWith(today) && o.status !== 'cancelled' && o.total != null
+    );
 
-    return () => {
-      subscription.unsubscribe();
+    const newStats = {
+      pending: data.filter(o => o.status === 'pending').length,
+      preparing: data.filter(o => o.status === 'preparing').length,
+      ready: data.filter(o => o.status === 'ready').length,
+      todayTotal: todayOrders.length,
+      todayRevenue: todayOrders.reduce((sum, o) => sum + (o.total || 0), 0),
     };
-  }, []);
-
+    
+    setStats(newStats);
+  };
+  
   const loadOrders = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -78,29 +130,45 @@ export default function StaffDashboard() {
     }
   };
 
-  const updateStats = (ordersData = null) => {
-    // Use the provided data or the current state if no data is provided
-    const data = ordersData || orders; 
-    const today = new Date().toISOString().split('T')[0];
+  useEffect(() => {
+    loadOrders();
     
-    // Ensure all necessary properties are available before filtering/reducing
-    const todayOrders = data.filter(o => 
-      o.created_at?.startsWith(today) && o.status !== 'cancelled' && o.total != null
-    );
+    // Real-time subscription for new orders and updates
+    const subscription = supabase
+      .channel('orders')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          playNotificationSound();
+          // Prepend new orders to the list for immediate visibility
+          setOrders(prev => {
+            const newOrders = [payload.new, ...prev];
+            updateStats(newOrders);
+            return newOrders;
+          });
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        (payload) => {
+          setOrders(prev => {
+            const updatedOrders = prev.map(order => 
+              order.id === payload.new.id ? payload.new : order
+            );
+            updateStats(updatedOrders);
+            return updatedOrders;
+          });
+        }
+      )
+      .subscribe();
 
-    // Recalculate stats based on the latest data
-    const newStats = {
-      pending: data.filter(o => o.status === 'pending').length,
-      preparing: data.filter(o => o.status === 'preparing').length,
-      ready: data.filter(o => o.status === 'ready').length,
-      todayTotal: todayOrders.length,
-      todayRevenue: todayOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+    return () => {
+      subscription.unsubscribe();
     };
-    
-    setStats(newStats);
-  };
+  }, []); // Empty dependency array ensures it runs once on mount
 
   const updateOrderStatus = async (orderId, newStatus) => {
+    setUpdateError(null);
     try {
       const { error } = await supabase
         .from('orders')
@@ -108,14 +176,18 @@ export default function StaffDashboard() {
         .eq('id', orderId);
 
       if (error) throw error;
+      if (newStatus === 'cancelled') {
+        setCancelOrder(null); // Close the modal on success
+      }
     } catch (err) {
       console.error('Error updating order:', err);
-      alert('Failed to update order status');
+      // Display graceful error message instead of alert()
+      setUpdateError(`Failed to update order ${orderId}: ${err.message}`);
     }
   };
 
   const playNotificationSound = () => {
-    // Browser notification sound
+    // Browser notification sound (WAV data is correct)
     const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjGH0fPTgjMGHm7A7+OZURE');
     audio.play().catch(() => {});
   };
@@ -165,12 +237,20 @@ export default function StaffDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold text-white">🎤 Sip & Sing - Staff Dashboard</h1>
-            <button
-              onClick={loadOrders}
-              className="bg-purple-700 text-white p-2 rounded-lg hover:bg-purple-600"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
+            <div className='flex items-center gap-3'>
+              <button
+                onClick={loadOrders}
+                className="bg-purple-700 text-white p-2 rounded-lg hover:bg-purple-600"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+              <button
+                  onClick={handleSignOut}
+                  className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+              >
+                  <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Stats */}
@@ -234,6 +314,15 @@ export default function StaffDashboard() {
           </button>
         </div>
       </div>
+      
+      {/* Update Error Toast */}
+      {updateError && (
+          <div className="bg-red-500 text-white p-3 text-center fixed top-2 right-4 rounded-lg shadow-xl z-50">
+              {updateError}
+              <button onClick={() => setUpdateError(null)} className="ml-4 font-bold">X</button>
+          </div>
+      )}
+
 
       {/* Orders List */}
       <div className="max-w-7xl mx-auto p-4">
@@ -309,7 +398,7 @@ export default function StaffDashboard() {
                           Start Preparing
                         </button>
                         <button
-                          onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                          onClick={() => setCancelOrder(order)} // Open the modal
                           className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
                         >
                           <X className="w-5 h-5" />
@@ -334,9 +423,9 @@ export default function StaffDashboard() {
                         Complete Order
                       </button>
                     )}
-                    {order.status === 'completed' && (
+                    {(order.status === 'completed' || order.status === 'cancelled') && (
                       <div className="flex-1 text-center text-purple-300 py-2">
-                        Order completed ✓
+                        Order {order.status} ✓
                       </div>
                     )}
                   </div>
@@ -346,7 +435,105 @@ export default function StaffDashboard() {
           </div>
         )}
       </div>
+      
+      {/* Render Confirmation Modal if an order is slated for cancellation */}
+      {cancelOrder && (
+        <ConfirmationModal 
+          order={cancelOrder}
+          onConfirm={() => updateOrderStatus(cancelOrder.id, 'cancelled')}
+          onCancel={() => setCancelOrder(null)}
+        />
+      )}
     </div>
   );
+};
+
+
+// --- 4. Authentication Wrapper (Default Export) ---
+export default function StaffAuth() {
+    const [userId, setUserId] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // --- Authentication Effect ---
+    useEffect(() => {
+        if (!auth) {
+            setError("Firebase Authentication service is unavailable. Check config.");
+            setIsLoading(false);
+            return;
+        }
+
+        const handleAuth = async () => {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                    console.warn("Custom token missing. Signed in anonymously.");
+                }
+            } catch (e) {
+                console.error("Authentication Error:", e.message);
+                setError(`Authentication failed: ${e.message}`);
+                try {
+                    await signInAnonymously(auth);
+                } catch (anonError) {
+                    setError(`Critical Auth Failure: ${anonError.message}`);
+                }
+            }
+        };
+
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setUserId(user.uid);
+            } else {
+                setUserId(null);
+            }
+            setIsLoading(false);
+        });
+
+        handleAuth();
+        return () => unsubscribe();
+    }, []);
+
+    // --- Manual Staff Sign Out ---
+    const handleSignOut = async () => {
+        try {
+            await signOut(auth);
+            setUserId(null);
+            console.log("Staff signed out.");
+        } catch (e) {
+            console.error("Sign out error:", e.message);
+        }
+    };
+    
+    // --- Loading State ---
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white">
+                <Loader className="w-8 h-8 animate-spin text-pink-500 mb-3" />
+                <p>Establishing secure connection...</p>
+            </div>
+        );
+    }
+
+    // --- Render Protected Content ---
+    if (userId) {
+        return (
+             <OrderManager 
+                userId={userId} 
+                handleSignOut={handleSignOut} 
+             />
+        );
+    }
+    
+    // --- Render Login Screen if not authenticated ---
+    return (
+        <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+             <div className="flex flex-col items-center justify-center p-6 bg-gray-900 rounded-xl shadow-2xl">
+                <h2 className="text-2xl font-bold text-white mb-4">Staff Login Required</h2>
+                <p className="text-red-400 text-sm mt-3">{error || "Access denied. Please ensure you are using the correct staff link."}</p>
+            </div>
+        </div>
+    );
 }
 

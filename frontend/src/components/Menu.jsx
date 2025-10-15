@@ -1,6 +1,5 @@
-===== Menu.jsx =====
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Minus, X, Check, Coffee, Utensils, Zap } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, X, Check } from 'lucide-react';
 // Import 'useSearchParams' for table number URL detection
 import { useSearchParams } from 'react-router-dom';
 
@@ -8,10 +7,17 @@ import { useSearchParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
 // NOTE: Vite automatically exposes environment variables prefixed with VITE_
+const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  VITE_SUPABASE_URL,
+  VITE_SUPABASE_ANON_KEY
 );
+
+// --- Image Configuration ---
+// The URL path to your public Supabase Storage bucket.
+const SUPABASE_STORAGE_URL = `${VITE_SUPABASE_URL}/storage/v1/object/public/menu-images`;
 
 // Category config (Keep this external definition)
 const CATEGORIES = [
@@ -35,12 +41,12 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Custom modal implementation for alert
         if ((orderType === 'dine-in' && !tableNumber) || !customerName.trim()) {
-            alert('Please enter your name and ensure table number is set for dine-in.'); 
+            console.error('Validation failed: Name and table number required.');
             return;
         }
         setIsSubmitting(true);
-        // Call the parent function with captured data
         await onSubmitOrder({ customerName, paymentMethod });
         setIsSubmitting(false);
     };
@@ -145,6 +151,7 @@ export default function Menu() {
   const [showCart, setShowCart] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false); 
+  const [itemCount, setItemCount] = useState(0); // NEW STATE FOR COUNT
   
   // Set initial state from URL query, e.g., ?table=5
   const initialTable = searchParams.get('table') || '';
@@ -180,6 +187,7 @@ export default function Menu() {
       
       const structuredMenu = items || [];
       setMenuItems(structuredMenu);
+      setItemCount(structuredMenu.length); // SET THE COUNT HERE
       
       // Cache for offline use (JSON.stringify is automatic when storing objects)
       localStorage.setItem('sipnsing_menu', JSON.stringify(structuredMenu));
@@ -190,16 +198,19 @@ export default function Menu() {
       // Fallback to localStorage for offline
       const cached = localStorage.getItem('sipnsing_menu');
       if (cached) {
-        setMenuItems(JSON.parse(cached));
+        const cachedMenu = JSON.parse(cached);
+        setMenuItems(cachedMenu);
+        setItemCount(cachedMenu.length);
       } else {
-        alert("Failed to load menu. Check network connection or Supabase keys.");
+        // Logging error as per instructions
+        console.error("Failed to load menu. Check network connection or Supabase keys.");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Cart Management Functions ---
+  // --- Cart Management Functions (Unchanged) ---
   const addToCart = (item, option = null) => {
     // Determine price: use option price if available, otherwise use base_price
     const price = option?.price || item.base_price; 
@@ -252,7 +263,7 @@ export default function Menu() {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  // --- Order Submission (Updated to use the new customer_name column) ---
+  // --- Order Submission (Unchanged) ---
   const handlePlaceOrder = async ({ customerName, paymentMethod }) => {
     
     if (cart.length === 0) return;
@@ -301,11 +312,12 @@ export default function Menu() {
         
     } catch (err) {
         console.error('Error placing order:', err);
-        alert('Failed to place order. Please try again. Error: ' + err.message); 
+        // Logging error as per instructions
+        console.error('Failed to place order. Error: ' + err.message); 
     }
   };
 
-  // --- UI and Rendering Functions ---
+  // --- UI and Rendering Functions (Unchanged) ---
   const scrollToCategory = (categoryId) => {
     setActiveCategory(categoryId);
     const element = document.getElementById(categoryId);
@@ -333,129 +345,99 @@ export default function Menu() {
     );
   }
 
-  // --- Render Menu Items and Options ---
+  // --- Render Menu Items and Options (Unchanged) ---
   const renderMenuItem = (item) => {
-  const hasOptions = item.options && item.options.length > 0;
-  
-  // Fallback image if item.image_url is null/broken
-  const fallbackImage = 'https://via.placeholder.com/300x200/4B0082/FFFFFF?text=' + encodeURIComponent(item.name);
-  const imageUrl = item.image_url || fallbackImage;
-  
-  return (
-    <div
-      key={item.id}
-      className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm border border-purple-500/30 rounded-xl overflow-hidden hover:border-pink-500/50 transition-all"
-    >
-      {/* NEW: Image Section */}
-      <div className="relative h-48 bg-purple-900/30 overflow-hidden">
-        <img
-          src={imageUrl}
-          alt={item.name}
-          className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-          onError={(e) => {
-            // If image fails to load, use fallback
-            e.target.src = fallbackImage;
-          }}
-        />
-        {/* Code badge overlay */}
-        <div className="absolute top-2 left-2 bg-pink-500/90 text-white px-2 py-1 rounded-md text-xs font-bold">
-          {item.code}
-        </div>
-      </div>
+    // FIX: Only convert to uppercase. Use the code exactly as is from the DB.
+    const standardizedCode = item.code.toUpperCase();
+    
+    // 1. Primary URL (WebP - recommended)
+    const webpUrl = `${SUPABASE_STORAGE_URL}/${standardizedCode}.webp`;
+    
+    // 2. Fallback URL (JPG - for your uploaded file)
+    const jpgUrl = `${SUPABASE_STORAGE_URL}/${standardizedCode}.jpg`;
 
-      {/* Existing content with adjusted padding */}
-      <div className="p-4">
-        <h3 className="text-lg font-bold text-white">{item.name}</h3>
-        {item.description && (
-          <p className="text-purple-200 text-sm mt-1">{item.description}</p>
-        )}
+    // 3. Placeholder image URL
+    const placeholderUrl = `https://placehold.co/200x150/5B21B6/D8B4FE?text=${standardizedCode}`;
 
-        {/* Rest of your existing code... */}
-        {hasOptions ? (
-          <div className="mt-3 space-y-2">
-            {item.options.map(option => (
-              <div key={option.id} className="flex justify-between items-center py-1 border-t border-purple-700/50 first:border-t-0">
-                <span className="text-purple-300 font-medium">{option.label}</span>
-                <div className="flex items-center gap-3">
-                    <span className="text-green-400 font-bold text-base">₱{option.price}</span>
-                    <button
-                      onClick={() => addToCart(item, option)}
-                      className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:shadow-lg transition-all"
-                    >
-                      <Plus className='w-4 h-4' />
-                    </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex justify-between items-center mt-3">
-            <span className="text-green-400 font-bold text-xl">₱{item.base_price}</span>
-            <button
-              onClick={() => addToCart(item)}
-              className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
-            >
-              Add to Cart
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
     // Check if the item has options (variants/sizes)
     const hasOptions = item.options && item.options.length > 0;
     
     return (
       <div
         key={item.id}
-        className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-4 hover:border-pink-500/50 transition-all"
+        className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-4 hover:border-pink-500/50 transition-all flex flex-col sm:flex-row gap-4"
       >
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <span className="text-pink-400 font-bold text-xs">{item.code}</span>
-            <h3 className="text-lg font-bold text-white">{item.name}</h3>
-            {item.description && (
-              <p className="text-purple-200 text-sm mt-1">{item.description}</p>
-            )}
-          </div>
+        
+        {/* Image Container (with hover effect) */}
+        <div className="w-full sm:w-2/5 md:w-1/3 flex-shrink-0 aspect-[4/3] rounded-lg overflow-hidden shadow-xl transform transition-transform duration-300 hover:scale-[1.02]">
+            <img
+                // Start by trying the WebP URL
+                src={webpUrl}
+                alt={item.name}
+                className="w-full h-full object-cover"
+                // Fallback logic
+                onError={(e) => {
+                    // If the first try (.webp) failed, try .jpg
+                    if (e.target.src.endsWith('.webp')) {
+                        e.target.src = jpgUrl; 
+                    } 
+                    // If the second try (.jpg) failed, use the final placeholder
+                    else if (e.target.src.endsWith('.jpg')) {
+                        e.target.onerror = null; // Prevent infinite loop
+                        e.target.src = placeholderUrl;
+                    }
+                }}
+            />
         </div>
 
-        {/* Dynamic Pricing and Add to Cart Section */}
-        {hasOptions ? (
-          <div className="mt-3 space-y-2">
-            {item.options.map(option => (
-              <div key={option.id} className="flex justify-between items-center py-1 border-t border-purple-700/50 first:border-t-0">
-                <span className="text-purple-300 font-medium">{option.label}</span>
-                <div className="flex items-center gap-3">
-                    <span className="text-green-400 font-bold text-base">₱{option.price}</span>
-                    <button
-                      onClick={() => addToCart(item, option)}
-                      className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:shadow-lg transition-all"
-                    >
-                      <Plus className='w-4 h-4' />
-                    </button>
+        {/* Content and CTA */}
+        <div className="flex-1 flex flex-col">
+            <div className="flex justify-between items-start mb-2">
+                <div>
+                    <span className="text-pink-400 font-bold text-xs">{item.code}</span>
+                    <h3 className="text-xl font-bold text-white">{item.name}</h3>
+                    {item.description && (
+                      <p className="text-purple-200 text-sm mt-1">{item.description}</p>
+                    )}
                 </div>
+            </div>
+
+            {/* Dynamic Pricing and Add to Cart Section */}
+            {hasOptions ? (
+              <div className="mt-auto space-y-2 pt-3 border-t border-purple-700/50">
+                {item.options.map(option => (
+                  <div key={option.id} className="flex justify-between items-center py-1">
+                    <span className="text-purple-300 font-medium">{option.label}</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-green-400 font-bold text-base">₱{option.price}</span>
+                        <button
+                          onClick={() => addToCart(item, option)}
+                          className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-all"
+                        >
+                          <Plus className='w-4 h-4' />
+                        </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          // Single Price Item
-          <div className="flex justify-between items-center mt-3">
-            <span className="text-green-400 font-bold text-xl">₱{item.base_price}</span>
-            <button
-              onClick={() => addToCart(item)}
-              className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
-            >
-              Add to Cart
-            </button>
-          </div>
-        )}
+            ) : (
+              // Single Price Item
+              <div className="flex justify-between items-center mt-auto pt-3 border-t border-purple-700/50">
+                <span className="text-green-400 font-bold text-xl">₱{item.base_price}</span>
+                <button
+                  onClick={() => addToCart(item)}
+                  className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
+                >
+                  Add to Cart
+                </button>
+              </div>
+            )}
+        </div>
       </div>
     );
   };
   
-  // --- Main Render Return (Unchanged UI) ---
+  // --- Main Render Return ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900">
       {/* Header */}
@@ -469,9 +451,18 @@ export default function Menu() {
         )}
       </div>
 
+      {/* Item Count Display (NEW) */}
+      {itemCount > 0 && (
+          <div className="bg-purple-700/90 text-center py-2 sticky top-[88px] z-30">
+              <span className="text-purple-200 text-sm font-medium">
+                  {itemCount} Items Loaded (Check the {itemCount} codes for missing images!)
+              </span>
+          </div>
+      )}
+
       {/* Success Banner */}
       {orderConfirmed && (
-        <div className="bg-green-600 p-3 text-center sticky top-[88px] z-30 flex justify-center items-center gap-3">
+        <div className="bg-green-600 p-3 text-center sticky top-[120px] z-30 flex justify-center items-center gap-3">
           <Check className="w-5 h-5" />
           <span className="font-semibold text-white">Order placed successfully! Staff notified.</span>
           <button onClick={() => setOrderConfirmed(false)} className="text-white opacity-70 hover:opacity-100 ml-auto">
@@ -481,7 +472,7 @@ export default function Menu() {
       )}
 
       {/* Category Nav */}
-      <div className="sticky top-[88px] z-20 bg-purple-800/90 backdrop-blur-sm overflow-x-auto flex gap-2 p-3 scrollbar-hide">
+      <div className="sticky top-[120px] z-20 bg-purple-800/90 backdrop-blur-sm overflow-x-auto flex gap-2 p-3 scrollbar-hide">
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
@@ -628,7 +619,8 @@ export default function Menu() {
                   // This button opens the checkout modal
                   onClick={() => {
                       if (orderType === 'dine-in' && !tableNumber) {
-                          alert('Please enter your table number for a dine-in order.');
+                          // Logging error as per instructions
+                          console.error('Validation failed: Please enter your table number for a dine-in order.');
                           return;
                       }
                       setShowCart(false);
