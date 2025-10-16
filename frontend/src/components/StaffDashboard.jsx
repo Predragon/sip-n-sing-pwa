@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Check, X, ChefHat, Bell, RefreshCw } from 'lucide-react';
+import { Clock, Check, X, ChefHat, Bell, RefreshCw, BellRing } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -19,6 +19,7 @@ export default function StaffDashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('active');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [stats, setStats] = useState({
     pending: 0,
     preparing: 0,
@@ -29,6 +30,7 @@ export default function StaffDashboard() {
 
   useEffect(() => {
     loadOrders();
+    checkNotificationPermission();
     
     const subscription = supabase
       .channel('orders')
@@ -36,6 +38,7 @@ export default function StaffDashboard() {
         { event: 'INSERT', schema: 'public', table: 'orders' },
         (payload) => {
           playNotificationSound();
+          sendPushNotification(payload.new);
           setOrders(prev => [payload.new, ...prev]);
           updateStats();
         }
@@ -57,6 +60,56 @@ export default function StaffDashboard() {
       subscription.unsubscribe();
     };
   }, []);
+
+  const checkNotificationPermission = () => {
+    if ('Notification' in window) {
+      setNotificationsEnabled(Notification.permission === 'granted');
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      alert('This browser does not support notifications');
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    setNotificationsEnabled(permission === 'granted');
+    
+    if (permission === 'granted') {
+      new Notification('🎉 Notifications Enabled!', {
+        body: 'You will now receive alerts for new orders',
+        icon: '/icon-192x192.png',
+        badge: '/icon-192x192.png',
+      });
+    }
+  };
+
+  const sendPushNotification = (order) => {
+    if (!notificationsEnabled || !('Notification' in window)) return;
+    
+    try {
+      const title = '🔔 New Order Received!';
+      const options = {
+        body: `${order.customer_name || 'Customer'} - Table ${order.table_number || 'N/A'}\nTotal: ₱${order.total}`,
+        icon: '/icon-192x192.png',
+        badge: '/icon-192x192.png',
+        tag: `order-${order.id}`,
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
+        data: { orderId: order.id },
+      };
+
+      const notification = new Notification(title, options);
+      
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+    } catch (err) {
+      console.error('Error sending notification:', err);
+    }
+  };
 
   const loadOrders = async () => {
     try {
@@ -156,12 +209,29 @@ export default function StaffDashboard() {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-3xl font-bold text-white">🎤 Sip & Sing - Staff Dashboard</h1>
-            <button
-              onClick={loadOrders}
-              className="bg-purple-700 text-white p-2 rounded-lg hover:bg-purple-600"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
+            <div className="flex gap-2">
+              {!notificationsEnabled && (
+                <button
+                  onClick={requestNotificationPermission}
+                  className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 flex items-center gap-2 font-semibold animate-pulse"
+                >
+                  <BellRing className="w-5 h-5" />
+                  Enable Alerts
+                </button>
+              )}
+              {notificationsEnabled && (
+                <div className="bg-green-500/20 text-green-300 px-4 py-2 rounded-lg flex items-center gap-2 border border-green-500/50">
+                  <Bell className="w-5 h-5" />
+                  Alerts ON
+                </div>
+              )}
+              <button
+                onClick={loadOrders}
+                className="bg-purple-700 text-white p-2 rounded-lg hover:bg-purple-600"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

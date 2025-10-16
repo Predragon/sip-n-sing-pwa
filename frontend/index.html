@@ -4,82 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sip & Sing Staff Dashboard</title>
-
-    <!-- ✅ PWA Manifest & Icons -->
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-    <link rel="apple-touch-icon" href="/icon-512.png" />
-    <meta name="theme-color" content="#C026D3" />
-
-    <!-- ✅ Meta for installation prompt -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Sip & Sing">
-
-    <!-- ✅ Tailwind CSS -->
+    <!-- Tailwind CSS is loaded via script, though often managed by Vite/PostCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
+      /* Ensure the body takes up the full viewport height */
       html, body, #root {
         height: 100%;
         margin: 0;
         padding: 0;
-        background-color: #111827; /* Matches manifest background_color */
-        color: white;
-        font-family: system-ui, sans-serif;
-      }
-
-      /* Simple loading screen until React mounts */
-      #loading-screen {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        background-color: #111827;
-      }
-
-      #loading-logo {
-        width: 120px;
-        height: 120px;
-        border-radius: 20px;
-        animation: pulse 1.5s infinite;
-      }
-
-      @keyframes pulse {
-        0% { opacity: 0.7; transform: scale(0.95); }
-        50% { opacity: 1; transform: scale(1.05); }
-        100% { opacity: 0.7; transform: scale(0.95); }
       }
     </style>
   </head>
-
-  <body>
-    <!-- 🌀 Loading screen shown before React mounts -->
-    <div id="loading-screen">
-      <img id="loading-logo" src="/icon-192.png" alt="Sip & Sing Logo" />
-    </div>
-
-    <!-- ⚛️ React Mount Point -->
+  <body class="bg-white">  <!-- Added Tailwind class for white background -->
+    <!-- THIS IS THE CRITICAL MOUNT POINT FOR REACT -->
     <div id="root"></div>
-
-    <!-- 🚀 Load React entry point -->
+    
+    <!-- This loads your main React application script -->
     <script type="module" src="/src/main.jsx"></script>
-
-    <!-- Once React mounts, hide the loading screen -->
-    <script>
-      window.addEventListener("DOMContentLoaded", () => {
-        const root = document.getElementById("root");
-        const loader = document.getElementById("loading-screen");
-        if (root && loader) {
-          const observer = new MutationObserver(() => {
-            loader.style.display = "none";
-            observer.disconnect();
-          });
-          observer.observe(root, { childList: true });
-        }
-      });
-    </script>
   </body>
 </html>
