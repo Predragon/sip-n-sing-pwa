@@ -8,8 +8,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     {/* CRITICAL: Wrap the App component with the Router */}
     <BrowserRouter>
-      <App />
+      {/* Added wrapper div for consistent white background and full coverage */}
+      <div className="bg-white min-h-screen">
+        <App />
+      </div>
     </BrowserRouter>
   </React.StrictMode>
 )
-
