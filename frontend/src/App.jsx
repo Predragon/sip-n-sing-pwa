@@ -12,8 +12,8 @@ export default function App() {
   const isStaffView = window.location.pathname.startsWith('/staff');
 
   return (
-    // Added wrapper div with Tailwind classes for full white background coverage
-    <div className="bg-white min-h-screen text-black">
+    // Inline style for white background (full viewport height, black text default)
+    <div style={{ backgroundColor: 'white', minHeight: '100vh', color: 'black' }}>
       {/* Renders the Staff Dashboard component if the path is /staff, 
           otherwise renders the Customer Menu component */}
       {isStaffView ? <StaffDashboard /> : <Menu />}

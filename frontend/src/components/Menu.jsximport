@@ -1,14 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, Minus, X, Check } from 'lucide-react';
-
-// Supabase client configuration
-import { createClient } from '@supabase/supabase-js';
-
-// NOTE: Vite automatically exposes environment variables prefixed with VITE_
-const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-const supabase = createClient(
+import { ShoppingCart, Plus, Minus, X, Check } from 'lucide-react';// Supabase client configurationimport { createClient } from '@supabase/supabase-js';// NOTE: Vite automatically exposes environment variables prefixed with VITE_const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;const supabase = createClient(
   VITE_SUPABASE_URL,
   VITE_SUPABASE_ANON_KEY
 );
@@ -630,4 +620,3 @@ export default function Menu() {
       )}
     </div>
   );
-}

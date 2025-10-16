@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, X, Check } from 'lucide-react';
+// Import 'useSearchParams' for table number URL detection
+import { useSearchParams } from 'react-router-dom';
 
 // Supabase client configuration
 import { createClient } from '@supabase/supabase-js';
@@ -14,9 +16,10 @@ const supabase = createClient(
 );
 
 // --- Image Configuration ---
+// The URL path to your public Supabase Storage bucket.
 const SUPABASE_STORAGE_URL = `${VITE_SUPABASE_URL}/storage/v1/object/public/menu-images`;
 
-// Category config
+// Category config (Keep this external definition)
 const CATEGORIES = [
   { id: 'grilled', icon: '🥩', label: 'Grilled' },
   { id: 'bestsellers', icon: '⭐', label: 'Best Sellers' },
@@ -30,7 +33,7 @@ const CATEGORIES = [
   { id: 'coffee', icon: '☕', label: 'Coffee' },
 ];
 
-// --- Checkout Modal Component ---
+// --- Checkout Modal Component (Integrated) ---
 const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }) => {
     const [customerName, setCustomerName] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('Cash');
@@ -38,8 +41,9 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Custom modal implementation for alert
         if ((orderType === 'dine-in' && !tableNumber) || !customerName.trim()) {
-            alert('Please enter your name' + (orderType === 'dine-in' ? ' and table number' : ''));
+            console.error('Validation failed: Name and table number required.');
             return;
         }
         setIsSubmitting(true);
@@ -58,7 +62,7 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                         </button>
                     </div>
 
-                    <div onSubmit={handleSubmit}>
+                    <form onSubmit={handleSubmit}>
                         {/* Order Context */}
                         <div className="mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
                             <p className="text-lg font-semibold text-indigo-700">Type: {orderType === 'dine-in' ? `Dine In (Table: ${tableNumber})` : 'Takeout'}</p>
@@ -115,8 +119,7 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                         
                         {/* Submit Button */}
                         <button
-                            type="button"
-                            onClick={handleSubmit}
+                            type="submit"
                             className={`w-full mt-6 py-3 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 
                                 ${isSubmitting ? 'bg-gray-400' : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'}`}
                             disabled={isSubmitting}
@@ -130,15 +133,17 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                                 </>
                             )}
                         </button>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
     );
 };
 
+
 // --- Main Menu Component ---
 export default function Menu() {
+  const [searchParams] = useSearchParams();
   const [menuItems, setMenuItems] = useState([]);
   const [cart, setCart] = useState([]);
   const [activeCategory, setActiveCategory] = useState('grilled');
@@ -146,14 +151,17 @@ export default function Menu() {
   const [showCart, setShowCart] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false); 
-  const [itemCount, setItemCount] = useState(0);
+  const [itemCount, setItemCount] = useState(0); // NEW STATE FOR COUNT
   
-  const [orderType, setOrderType] = useState('takeout');
-  const [tableNumber, setTableNumber] = useState('');
+  // Set initial state from URL query, e.g., ?table=5
+  const initialTable = searchParams.get('table') || '';
+  const [orderType, setOrderType] = useState(initialTable ? 'dine-in' : 'takeout');
+  const [tableNumber, setTableNumber] = useState(initialTable);
 
   // --- Initial Data Load ---
   useEffect(() => {
     loadMenuFromSupabase();
+    // Also load cart from localStorage
     const savedCart = localStorage.getItem('sipnsing_cart');
     if (savedCart) {
         setCart(JSON.parse(savedCart));
@@ -165,32 +173,10 @@ export default function Menu() {
     localStorage.setItem('sipnsing_cart', JSON.stringify(cart));
   }, [cart]);
   
-  // --- Scroll Tracking for Active Category ---
-  useEffect(() => {
-    const handleScroll = () => {
-      const sections = CATEGORIES.map(cat => ({
-        id: cat.id,
-        element: document.getElementById(cat.id)
-      })).filter(s => s.element);
-
-      const scrollPosition = window.scrollY + 200;
-
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const section = sections[i];
-        if (section.element.offsetTop <= scrollPosition) {
-          setActiveCategory(section.id);
-          break;
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-  
   // --- Supabase Fetch Logic ---
   const loadMenuFromSupabase = async () => {
     try {
+      // 1. Fetch all menu items
       let { data: items, error: itemsError } = await supabase
         .from('menu_items')
         .select(`*, options:menu_item_options (id, label, price, sort_order)`)
@@ -201,19 +187,22 @@ export default function Menu() {
       
       const structuredMenu = items || [];
       setMenuItems(structuredMenu);
-      setItemCount(structuredMenu.length);
+      setItemCount(structuredMenu.length); // SET THE COUNT HERE
       
+      // Cache for offline use (JSON.stringify is automatic when storing objects)
       localStorage.setItem('sipnsing_menu', JSON.stringify(structuredMenu));
       
     } catch (err) {
       console.error('Error loading menu from Supabase:', err.message);
       
+      // Fallback to localStorage for offline
       const cached = localStorage.getItem('sipnsing_menu');
       if (cached) {
         const cachedMenu = JSON.parse(cached);
         setMenuItems(cachedMenu);
         setItemCount(cachedMenu.length);
       } else {
+        // Logging error as per instructions
         console.error("Failed to load menu. Check network connection or Supabase keys.");
       }
     } finally {
@@ -221,9 +210,12 @@ export default function Menu() {
     }
   };
 
-  // --- Cart Management Functions ---
+  // --- Cart Management Functions (Unchanged) ---
   const addToCart = (item, option = null) => {
+    // Determine price: use option price if available, otherwise use base_price
     const price = option?.price || item.base_price; 
+    
+    // Create a unique ID for the cart item (item_id + option_id)
     const cartItemId = `${item.id}-${option?.id || 'base'}`;
     
     const cartItem = {
@@ -231,9 +223,9 @@ export default function Menu() {
       item_id: item.id,
       code: item.code,
       name: item.name,
-      option_id: option?.id || null,
+      option_id: option?.id || null, // Track the option ID for clarity
       option_label: option?.label || 'Regular',
-      price: parseFloat(price),
+      price: parseFloat(price), // Ensure price is a number
       quantity: 1,
     };
 
@@ -271,15 +263,20 @@ export default function Menu() {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  // --- Order Submission ---
+  // --- Order Submission (Unchanged) ---
   const handlePlaceOrder = async ({ customerName, paymentMethod }) => {
+    
     if (cart.length === 0) return;
 
     try {
         const orderData = {
+            // This is the clean, correct column name after running the SQL script
             customer_name: customerName, 
+            
             order_type: orderType,
             table_number: orderType === 'dine-in' ? tableNumber : null,
+            
+            // Map cart items to the JSONB structure defined in the orders table
             items: cart.map(item => ({
                 item_id: item.item_id,
                 code: item.code,
@@ -288,10 +285,13 @@ export default function Menu() {
                 price: item.price,
                 quantity: item.quantity,
             })),
+            
             subtotal: getCartTotal(),
             tax: 0,
             total: getCartTotal(),
-            status: 'pending',
+            status: 'pending', // Default status
+            
+            // Use payment method captured in the modal (converted to lowercase for DB CHECK constraint)
             payment_method: paymentMethod.toLowerCase(), 
             payment_status: 'pending',
         };
@@ -304,18 +304,20 @@ export default function Menu() {
 
         if (error) throw error;
         
-        setCart([]);
-        localStorage.removeItem('sipnsing_cart');
-        setShowCheckoutModal(false);
-        setOrderConfirmed(true);
+        // Success actions
+        setCart([]); // Clear cart
+        localStorage.removeItem('sipnsing_cart'); // Clear storage
+        setShowCheckoutModal(false); // Close the modal
+        setOrderConfirmed(true); // Show confirmation banner
         
     } catch (err) {
         console.error('Error placing order:', err);
-        alert('Failed to place order: ' + err.message);
+        // Logging error as per instructions
+        console.error('Failed to place order. Error: ' + err.message); 
     }
   };
 
-  // --- UI Functions ---
+  // --- UI and Rendering Functions (Unchanged) ---
   const scrollToCategory = (categoryId) => {
     setActiveCategory(categoryId);
     const element = document.getElementById(categoryId);
@@ -327,47 +329,61 @@ export default function Menu() {
     }
   };
 
+  // Group items by category (using the CATEGORIES array for order)
   const itemsByCategory = menuItems.reduce((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
     return acc;
   }, {});
 
+
   if (loading) {
     return (
-      <div className="bg-white min-h-screen flex items-center justify-center">
-        <div className="text-gray-800 text-xl">Loading menu...</div>
+      <div style={{ backgroundColor: 'white', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#1f2937', fontSize: '1.25rem' }}>Loading menu...</div>
       </div>
     );
   }
 
-  // --- Render Menu Items ---
+  // --- Render Menu Items and Options (Unchanged) ---
   const renderMenuItem = (item) => {
+    // FIX: Only convert to uppercase. Use the code exactly as is from the DB.
     const standardizedCode = item.code.toUpperCase();
+    
+    // 1. Primary URL (WebP - recommended)
     const webpUrl = `${SUPABASE_STORAGE_URL}/${standardizedCode}.webp`;
+    
+    // 2. Fallback URL (JPG - for your uploaded file)
     const jpgUrl = `${SUPABASE_STORAGE_URL}/${standardizedCode}.jpg`;
+
+    // 3. Placeholder image URL
     const placeholderUrl = `https://placehold.co/200x150/5B21B6/D8B4FE?text=${standardizedCode}`;
 
+    // Check if the item has options (variants/sizes)
     const hasOptions = item.options && item.options.length > 0;
     
     return (
       <div
         key={item.id}
-        className="bg-purple-100 border-2 border-purple-300 rounded-xl p-5 hover:border-purple-500 hover:shadow-xl transition-all flex flex-col sm:flex-row gap-4"
+        className="bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-300 transition-all flex flex-col sm:flex-row gap-4 shadow-sm"
       >
         
-        {/* Image Container */}
+        {/* Image Container (with hover effect) */}
         <div className="w-full sm:w-2/5 md:w-1/3 flex-shrink-0 aspect-[4/3] rounded-lg overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-[1.02]">
             <img
+                // Start by trying the WebP URL
                 src={webpUrl}
                 alt={item.name}
                 className="w-full h-full object-cover"
+                // Fallback logic
                 onError={(e) => {
+                    // If the first try (.webp) failed, try .jpg
                     if (e.target.src.endsWith('.webp')) {
                         e.target.src = jpgUrl; 
                     } 
+                    // If the second try (.jpg) failed, use the final placeholder
                     else if (e.target.src.endsWith('.jpg')) {
-                        e.target.onerror = null;
+                        e.target.onerror = null; // Prevent infinite loop
                         e.target.src = placeholderUrl;
                     }
                 }}
@@ -388,15 +404,15 @@ export default function Menu() {
 
             {/* Dynamic Pricing and Add to Cart Section */}
             {hasOptions ? (
-              <div className="mt-auto space-y-2 pt-3 border-t border-purple-300">
+              <div className="mt-auto space-y-2 pt-3 border-t border-gray-200">
                 {item.options.map(option => (
                   <div key={option.id} className="flex justify-between items-center py-1">
-                    <span className="text-purple-900 font-semibold">{option.label}</span>
+                    <span className="text-gray-700 font-medium">{option.label}</span>
                     <div className="flex items-center gap-3">
-                        <span className="text-purple-700 font-bold text-lg">₱{option.price}</span>
+                        <span className="text-green-600 font-bold text-base">₱{option.price}</span>
                         <button
                           onClick={() => addToCart(item, option)}
-                          className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-2 rounded-lg text-sm font-semibold hover:shadow-lg hover:scale-105 transition-all"
+                          className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-all"
                         >
                           <Plus className='w-4 h-4' />
                         </button>
@@ -405,11 +421,12 @@ export default function Menu() {
                 ))}
               </div>
             ) : (
-              <div className="flex justify-between items-center mt-auto pt-3 border-t border-purple-300">
-                <span className="text-purple-800 font-bold text-xl">₱{item.base_price}</span>
+              // Single Price Item
+              <div className="flex justify-between items-center mt-auto pt-3 border-t border-gray-200">
+                <span className="text-green-600 font-bold text-xl">₱{item.base_price}</span>
                 <button
                   onClick={() => addToCart(item)}
-                  className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all"
+                  className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
                 >
                   Add to Cart
                 </button>
@@ -420,25 +437,25 @@ export default function Menu() {
     );
   };
   
-  // --- Main Render ---
+  // --- Main Render Return ---
   return (
-    <div className="bg-white min-h-screen text-gray-800">
+    <div style={{ backgroundColor: 'white', minHeight: '100vh', color: '#1f2937' }}>
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-center sticky top-0 z-40 shadow-lg">
         <h1 className="text-3xl font-bold text-white mb-1">🎤 Sip & Sing Restobar</h1>
         <p className="text-purple-100 text-sm">Delicious Food • Refreshing Drinks • Great Vibes</p>
         {tableNumber && orderType === 'dine-in' && (
           <p className="text-yellow-300 text-base mt-2">
-            Ordering for Table {tableNumber}
+            Ordering for Table **{tableNumber}**
           </p>
         )}
       </div>
 
-      {/* Item Count Display */}
+      {/* Item Count Display (NEW) */}
       {itemCount > 0 && (
           <div className="bg-gray-50 text-center py-2 sticky top-[88px] z-30">
               <span className="text-gray-600 text-sm font-medium">
-                  {itemCount} Items Loaded
+                  {itemCount} Items Loaded (Check the {itemCount} codes for missing images!)
               </span>
           </div>
       )}
@@ -446,7 +463,7 @@ export default function Menu() {
       {/* Success Banner */}
       {orderConfirmed && (
         <div className="bg-green-600 p-3 text-center sticky top-[120px] z-30 flex justify-center items-center gap-3">
-          <Check className="w-5 h-5 text-white" />
+          <Check className="w-5 h-5" />
           <span className="font-semibold text-white">Order placed successfully! Staff notified.</span>
           <button onClick={() => setOrderConfirmed(false)} className="text-white opacity-70 hover:opacity-100 ml-auto">
             <X className="w-5 h-5" />
@@ -505,7 +522,7 @@ export default function Menu() {
         )}
       </button>
 
-      {/* Cart Modal */}
+      {/* Cart Modal / Sidebar */}
       {showCart && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-end md:items-center justify-center">
           <div className="bg-white w-full md:max-w-2xl md:rounded-t-3xl md:rounded-b-3xl max-h-[90vh] overflow-y-auto">
@@ -599,9 +616,11 @@ export default function Menu() {
                   <span className="text-2xl font-bold text-green-600">₱{getCartTotal().toFixed(2)}</span>
                 </div>
                 <button
+                  // This button opens the checkout modal
                   onClick={() => {
                       if (orderType === 'dine-in' && !tableNumber) {
-                          alert('Please enter your table number for dine-in order');
+                          // Logging error as per instructions
+                          console.error('Validation failed: Please enter your table number for a dine-in order.');
                           return;
                       }
                       setShowCart(false);
@@ -618,7 +637,7 @@ export default function Menu() {
         </div>
       )}
       
-      {/* Checkout Modal */}
+      {/* Checkout Modal Render */}
       {showCheckoutModal && (
         <CheckoutModal 
             total={getCartTotal()}

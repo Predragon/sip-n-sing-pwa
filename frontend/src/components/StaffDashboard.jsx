@@ -197,14 +197,14 @@ export default function StaffDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading orders...</div>
+      <div style={{ backgroundColor: 'white', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#1f2937', fontSize: '1.25rem' }}>Loading orders...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 to-indigo-900">
+    <div style={{ backgroundColor: 'white', minHeight: '100vh', color: '#1f2937' }}>
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 sticky top-0 z-50 shadow-lg">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-4">
@@ -259,14 +259,14 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      <div className="bg-purple-800/50 p-3">
+      <div className="bg-gray-50 p-3">
         <div className="max-w-7xl mx-auto flex gap-2">
           <button
             onClick={() => setFilter('active')}
             className={`px-4 py-2 rounded-lg font-semibold ${
               filter === 'active'
                 ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
-                : 'bg-purple-700 text-purple-200'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
             Active Orders ({stats.pending + stats.preparing + stats.ready})
@@ -276,7 +276,7 @@ export default function StaffDashboard() {
             className={`px-4 py-2 rounded-lg font-semibold ${
               filter === 'completed'
                 ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
-                : 'bg-purple-700 text-purple-200'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
             Completed
@@ -286,7 +286,7 @@ export default function StaffDashboard() {
             className={`px-4 py-2 rounded-lg font-semibold ${
               filter === 'all'
                 ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
-                : 'bg-purple-700 text-purple-200'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
             All Orders
@@ -297,8 +297,8 @@ export default function StaffDashboard() {
       <div className="max-w-7xl mx-auto p-4">
         {filteredOrders.length === 0 ? (
           <div className="text-center py-12">
-            <ChefHat className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-            <p className="text-purple-300 text-lg">No orders yet</p>
+            <ChefHat className="w-16 h-16 text-purple-600 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg">No orders yet</p>
           </div>
         ) : (
           <div className="grid gap-4">
@@ -309,7 +309,7 @@ export default function StaffDashboard() {
               return (
                 <div
                   key={order.id}
-                  className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-5 hover:border-pink-500/50 transition-all"
+                  className="bg-white border border-gray-200 rounded-xl p-5 hover:border-purple-300 transition-all shadow-sm"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -324,29 +324,29 @@ export default function StaffDashboard() {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-xl font-bold text-white">
+                      <h3 className="text-xl font-bold text-gray-800">
                         {order.customer_name}
                         {order.table_number && (
-                          <span className="text-pink-400 ml-2">• Table {order.table_number}</span>
+                          <span className="text-purple-600 ml-2">• Table {order.table_number}</span>
                         )}
                       </h3>
-                      <p className="text-purple-300 text-sm flex items-center gap-2">
+                      <p className="text-gray-600 text-sm flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         {formatTime(order.created_at)} ({getTimeSince(order.created_at)})
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-400">₱{order.total}</div>
-                      <div className="text-purple-300 text-sm">{order.payment_method}</div>
+                      <div className="text-2xl font-bold text-green-600">₱{order.total}</div>
+                      <div className="text-gray-600 text-sm">{order.payment_method}</div>
                     </div>
                   </div>
 
-                  <div className="bg-purple-900/30 rounded-lg p-3 mb-4">
-                    <h4 className="text-white font-semibold mb-2">Items:</h4>
+                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                    <h4 className="text-gray-800 font-semibold mb-2">Items:</h4>
                     {order.items?.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-purple-200 text-sm mb-1">
+                      <div key={idx} className="flex justify-between text-gray-700 text-sm mb-1">
                         <span>{item.quantity}x {item.name} ({item.code})</span>
-                        <span className="text-green-400">₱{(item.price * item.quantity).toFixed(2)}</span>
+                        <span className="text-green-600">₱{(item.price * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
@@ -388,7 +388,7 @@ export default function StaffDashboard() {
                       </button>
                     )}
                     {order.status === 'completed' && (
-                      <div className="flex-1 text-center text-purple-300 py-2">
+                      <div className="flex-1 text-center text-gray-500 py-2">
                         Order completed ✓
                       </div>
                     )}
