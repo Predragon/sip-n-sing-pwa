@@ -187,8 +187,10 @@ export default function Menu() {
     try {
       let { data: items, error: itemsError } = await supabase
         .from('menu_items')
-        .select(`*, options:menu_item_options (id, label, price, sort_order)`)
+        .select(`*, options:menu_item_options (id, label, price, sort_order), special_notes`)
+        .eq('available', true)  // Filter unavailable/removed
         .order('category', { ascending: true })
+        .order('sort_order', { ascending: true })  // Use new sort
         .order('code', { ascending: true });
 
       if (itemsError) throw itemsError;
@@ -277,6 +279,7 @@ export default function Menu() {
                 code: item.code,
                 name: item.name,
                 option: item.option_label,
+                option_id: item.option_id,  // Added to jsonb
                 price: item.price,
                 quantity: item.quantity,
             })),
@@ -352,7 +355,8 @@ export default function Menu() {
     
     const aspect32Images = [
       'L1-L6', 'D1-D6', 'SM1-SM3', 'SM4-SM6', 'SM7-SM9', 'CF1-CF7',
-      'AL1', 'WHISKEY', 'MIXED', 'NON-AL', 'BKT1', 'BKT2', 'BKT3', 'BKT4', 'BKT5'
+      'AL1', 'WHISKEY', 'MIXED', 'NON-AL', 'BKT1', 'BKT2', 'BKT3', 'BKT4', 'BKT5',
+      'BEERS', 'VODKA', 'RHUM', 'GIN'  // Added 4:3/3:2 per spec
     ];
     const aspect23Images = ['BKT'];
     
@@ -407,6 +411,9 @@ export default function Menu() {
                     {item.description && (
                       <p className="text-gray-600 text-sm mt-1">{item.description}</p>
                     )}
+                    {item.special_notes && (
+                      <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
+                    )}
                   </div>
                 )}
 
@@ -418,6 +425,9 @@ export default function Menu() {
                       <span className="text-gray-800 font-semibold">{item.name}</span>
                       {item.description && (
                         <p className="text-gray-600 text-sm mt-1">{item.description}</p>
+                      )}
+                      {item.special_notes && (
+                        <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
                       )}
                       <p className="text-purple-700 font-bold text-xl mt-2">₱{item.base_price}</p>
                     </div>
@@ -478,7 +488,7 @@ export default function Menu() {
     <div className="bg-gray-50 min-h-screen text-gray-800">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-center sticky top-0 z-40 shadow-lg">
-        <h1 className="text-3xl font-bold text-white mb-1">🎤 Sip & Sing Restobar</h1>
+        <h1 className="text-3xl font-bold text-white mb-1">Sip & Sing</h1>
         <p className="text-purple-100 text-sm">Delicious Food • Refreshing Drinks • Great Vibes</p>
         {tableNumber && orderType === 'dine-in' && (
           <p className="text-yellow-300 text-base mt-2">
