@@ -33,7 +33,7 @@ const CATEGORIES = [
   { id: 'buckets', icon: '🍻', label: 'Buckets' },
 ];
 
-// --- Checkout Modal Component ---
+// --- Checkout Modal Component (Green Theme) ---
 const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }) => {
     const [customerName, setCustomerName] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('Cash');
@@ -89,7 +89,6 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                                         value="Cash"
                                         checked={paymentMethod === 'Cash'}
                                         onChange={() => setPaymentMethod('Cash')}
-                                        // NEW GREEN COLOR
                                         className="form-radio text-emerald-600 h-5 w-5"
                                     />
                                     <span className="text-gray-700">Cash</span>
@@ -101,7 +100,6 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                                         value="Card"
                                         checked={paymentMethod === 'Card'}
                                         onChange={() => setPaymentMethod('Card')}
-                                        // NEW GREEN COLOR
                                         className="form-radio text-emerald-600 h-5 w-5"
                                     />
                                     <span className="text-gray-700">Card (Debit/Credit)</span>
@@ -111,8 +109,7 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
 
                         <div className="flex justify-between items-center text-xl font-bold text-gray-900 border-t pt-3">
                             <span>Total:</span>
-                            {/* NEW GREEN COLOR */}
-                            <span className="text-emerald-600">₱{total.toFixed(2)}</span>
+                            <span className="text-2xl font-bold text-emerald-600">₱{total.toFixed(2)}</span>
                         </div>
                         
                         <button
@@ -121,7 +118,6 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                             className={`w-full mt-6 py-3 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 
                                 ${isSubmitting 
                                     ? 'bg-gray-400' 
-                                    // NEW GREEN GRADIENT
                                     : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'
                                 }`}
                             disabled={isSubmitting}
@@ -360,28 +356,28 @@ export default function Menu() {
     const webpUrl = `${SUPABASE_STORAGE_URL}/${imageCode}.webp`;
     const jpgUrl = `${SUPABASE_STORAGE_URL}/${imageCode}.jpg`;
     
+    // --- Aspect Ratio Logic based on Specification ---
     const aspect32Images = [
       'L1-L6', 'D1-D6', 'SM1-SM3', 'SM4-SM6', 'SM7-SM9', 'CF1-CF7',
       'AL1', 'WHISKEY', 'MIXED', 'NON-AL', 'BKT1', 'BKT2', 'BKT3', 'BKT4', 'BKT5',
-      'BEERS', 'VODKA', 'RHUM', 'GIN'
     ];
     const aspect23Images = ['BKT'];
     
     const is32Aspect = aspect32Images.includes(imageCode);
     const is23Aspect = aspect23Images.includes(imageCode);
     
-    let placeholderDimensions = '200x150';
+    let placeholderDimensions = '400x300'; // Default 4:3
     let aspectClass = 'aspect-[4/3]';
     
     if (is32Aspect) {
-      placeholderDimensions = '300x200';
+      placeholderDimensions = '450x300';
       aspectClass = 'aspect-[3/2]';
     } else if (is23Aspect) {
-      placeholderDimensions = '200x300';
+      placeholderDimensions = '300x450';
       aspectClass = 'aspect-[2/3]';
     }
     
-    const placeholderUrl = `https://placehold.co/${placeholderDimensions}/22c55e/ffffff?text=${imageCode}`; // Green placeholder
+    const placeholderUrl = `https://placehold.co/${placeholderDimensions}/22c55e/ffffff?text=${imageCode}`;
     const isGrouped = items.length > 1;
     
     return (
@@ -408,87 +404,90 @@ export default function Menu() {
           {items.map((item, idx) => {
             const hasOptions = item.options && item.options.length > 0;
             
+            // --- Case 1: Single, Non-Grouped Item (Pattern 3) ---
+            if (!isGrouped && !hasOptions) {
+                return (
+                    <div key={item.id} className="flex justify-between items-center">
+                        <div>
+                            <span className="text-green-600 font-bold text-sm mr-2">{item.code}</span>
+                            <span className="text-gray-800 font-semibold">{item.name}</span>
+                            {/* DESCRIPTION - Rendered ONCE here for Pattern 3 */}
+                            {item.description && (
+                                <p className="text-gray-600 text-sm mt-1">{item.description}</p>
+                            )}
+                            {item.special_notes && (
+                                <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
+                            )}
+                            <p className="text-emerald-700 font-bold text-xl mt-2">₱{item.base_price}</p>
+                        </div>
+                        <button
+                            onClick={() => addToCart(item)}
+                            className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all whitespace-nowrap ml-4"
+                        >
+                            Add to Cart
+                        </button>
+                    </div>
+                );
+            }
+            
+            // --- Case 2 & 3: Grouped or Optional Item (Patterns 1 & 2) ---
             return (
               <div key={item.id} className={`${idx > 0 ? 'mt-4 pt-4 border-t border-gray-200' : ''}`}>
-                {/* Item Header - only show for grouped items or items with options */}
-                {(isGrouped || hasOptions) && (
-                  <div className="mb-2">
-                    {/* NEW GREEN COLOR ACCENT */}
-                    <span className="text-green-600 font-bold text-sm mr-2">{item.code}</span>
-                    <span className="text-gray-800 font-semibold">{item.name}</span>
-                    {item.description && (
-                      <p className="text-gray-600 text-sm mt-1">{item.description}</p>
-                    )}
-                    {item.special_notes && (
-                      <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Single item without options and not grouped */}
-                {!hasOptions && !isGrouped && (
-                  <div className="flex justify-between items-center">
-                    <div>
-                      {/* NEW GREEN COLOR ACCENT */}
-                      <span className="text-green-600 font-bold text-sm mr-2">{item.code}</span>
-                      <span className="text-gray-800 font-semibold">{item.name}</span>
-                      {item.description && (
-                        <p className="text-gray-600 text-sm mt-1">{item.description}</p>
-                      )}
-                      {item.special_notes && (
-                        <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
-                      )}
-                      {/* NEW GREEN COLOR ACCENT */}
-                      <p className="text-emerald-700 font-bold text-xl mt-2">₱{item.base_price}</p>
+                
+                {/* A. Item Header (Used for Pattern 2 - Optional Item Header) */}
+                {/* FINAL FIX: Only display header if it has options (Pattern 2) to prevent description redundancy on Pattern 1 groups */}
+                {hasOptions && (
+                    <div className="mb-2">
+                        <span className="text-green-600 font-bold text-sm mr-2">{item.code}</span>
+                        <span className="text-gray-800 font-semibold">{item.name}</span>
+                        {/* DESCRIPTION - Rendered ONCE here for Pattern 2 header */}
+                        {item.description && (
+                            <p className="text-gray-600 text-sm mt-1">{item.description}</p>
+                        )}
+                        {item.special_notes && (
+                            <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
+                        )}
                     </div>
-                    <button
-                      onClick={() => addToCart(item)}
-                      // NEW GREEN GRADIENT FOR BUTTON
-                      className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all whitespace-nowrap ml-4"
-                    >
-                      Add to Cart
-                    </button>
-                  </div>
                 )}
 
-                {/* Options or grouped items with base price */}
-                {(hasOptions || (isGrouped && !hasOptions)) && (
-                  <div className="space-y-2">
+                {/* B. Options/Base Price Selection List */}
+                <div className="space-y-2">
                     {hasOptions ? (
-                      item.options.map(option => (
-                        <div key={option.id} className="flex justify-between items-center py-2">
-                          <span className="text-gray-700">{option.label}</span>
-                          <div className="flex items-center gap-3">
-                            {/* NEW GREEN COLOR ACCENT */}
-                            <span className="text-emerald-700 font-bold">₱{option.price}</span>
-                            <button
-                              onClick={() => addToCart(item, option)}
-                              // NEW GREEN COLOR ACCENT
-                              className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors"
-                            >
-                              <Plus className='w-4 h-4' />
-                            </button>
-                          </div>
-                        </div>
-                      ))
+                        // Item with multiple options (Pattern 2)
+                        item.options.map(option => (
+                            <div key={option.id} className="flex justify-between items-center py-2">
+                                <span className="text-gray-700">{option.label}</span>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-emerald-700 font-bold">₱{option.price}</span>
+                                    <button
+                                        onClick={() => addToCart(item, option)}
+                                        className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors"
+                                    >
+                                        <Plus className='w-4 h-4' />
+                                    </button>
+                                </div>
+                            </div>
+                        ))
                     ) : (
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-800 font-semibold">{item.name}</span> 
-                        <div className="flex items-center gap-3">
-                          {/* NEW GREEN COLOR ACCENT */}
-                          <span className="text-emerald-700 font-bold">₱{item.base_price}</span>
-                          <button
-                            onClick={() => addToCart(item)}
-                            // NEW GREEN COLOR ACCENT
-                            className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors"
-                          >
-                            <Plus className='w-4 h-4' />
-                          </button>
+                        // Grouped item with only a base price (Pattern 1)
+                        <div className="flex justify-between items-center py-2">
+                            {/* For Pattern 1, we only display the Code, Name, and Price */}
+                            <div className='flex items-center'>
+                                <span className="text-green-600 font-bold text-sm mr-2">{item.code}</span>
+                                <span className="text-gray-700">{item.name}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-emerald-700 font-bold">₱{item.base_price}</span>
+                                <button
+                                    onClick={() => addToCart(item)}
+                                    className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors"
+                                >
+                                    <Plus className='w-4 h-4' />
+                                </button>
+                            </div>
                         </div>
-                      </div>
                     )}
-                  </div>
-                )}
+                </div>
               </div>
             );
           })}
@@ -502,9 +501,9 @@ export default function Menu() {
   return (
     <div className="bg-gray-50 min-h-screen text-gray-800">
       
-      {/* Header (Top Bar) - NEW GREEN THEME AND LEFT ALIGNMENT */}
+      {/* Header (Top Bar) - Green Theme */}
       <div className="bg-gradient-to-r from-emerald-600 to-green-800 p-5 sticky top-0 z-40 shadow-xl">
-        <div className="flex items-center justify-start gap-4"> {/* Use justify-start to align left */}
+        <div className="flex items-center justify-start gap-4">
           {/* Logo Container */}
           <img 
             src={`${SUPABASE_STORAGE_URL}/logo.webp`}
@@ -516,7 +515,7 @@ export default function Menu() {
             }}
           />
           
-          {/* Text Container - Aligned left next to logo */}
+          {/* Text Container */}
           <div>
             <h1 className="text-3xl font-extrabold text-white leading-none tracking-tight">
                 SIP & SING
@@ -537,7 +536,7 @@ export default function Menu() {
         )}
       </div>
 
-      {/* Item Count Display - NEW GREEN ACCENT */}
+      {/* Item Count Display */}
       {itemCount > 0 && (
           <div className="bg-white/70 backdrop-blur-sm text-center py-2 sticky top-[108px] z-30 shadow-sm">
               <span className="text-gray-600 text-sm font-medium">
@@ -557,7 +556,7 @@ export default function Menu() {
         </div>
       )}
 
-      {/* Category Nav - NEW TRANSPARENCY AND GREEN THEME */}
+      {/* Category Nav - Transparency */}
       <div className="sticky top-[140px] z-20 bg-white/90 backdrop-blur-md shadow-lg overflow-x-auto flex gap-2 p-3 border-b border-gray-200">
         {CATEGORIES.map(cat => (
           <button
@@ -565,7 +564,6 @@ export default function Menu() {
             onClick={() => scrollToCategory(cat.id)}
             className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold transition-all ${
               activeCategory === cat.id
-                // NEW GREEN GRADIENT FOR ACTIVE BUTTON
                 ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
@@ -603,7 +601,6 @@ export default function Menu() {
       {/* Cart Button */}
       <button
         onClick={() => setShowCart(true)}
-        // NEW GREEN GRADIENT FOR CART BUTTON
         className="fixed bottom-6 right-6 bg-gradient-to-r from-emerald-500 to-green-600 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-30"
       >
         <ShoppingCart className="w-6 h-6" />
@@ -631,7 +628,6 @@ export default function Menu() {
                   onClick={() => setOrderType('dine-in')}
                   className={`flex-1 py-3 rounded-lg font-semibold ${
                     orderType === 'dine-in'
-                      // NEW GREEN GRADIENT FOR DINE IN BUTTON
                       ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white'
                       : 'bg-gray-100 text-gray-700'
                   }`}
@@ -642,7 +638,6 @@ export default function Menu() {
                   onClick={() => setOrderType('takeout')}
                   className={`flex-1 py-3 rounded-lg font-semibold ${
                     orderType === 'takeout'
-                      // NEW GREEN GRADIENT FOR TAKEOUT BUTTON
                       ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white'
                       : 'bg-gray-100 text-gray-700'
                   }`}
@@ -657,7 +652,6 @@ export default function Menu() {
                   placeholder="Table Number (e.g. A2)"
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
-                  // NEW GREEN FOCUS RING
                   className="w-full p-3 rounded-lg bg-gray-100 text-gray-800 border border-gray-300 focus:border-emerald-500 focus:outline-none"
                 />
               )}
@@ -672,7 +666,6 @@ export default function Menu() {
                     <div className="flex-1">
                       <h4 className="font-bold text-gray-800">{item.name}</h4>
                       {item.option_label && <p className="text-gray-600 text-sm">{item.option_label}</p>}
-                      {/* Using a darker green for price to stand out */}
                       <p className="text-green-700 font-semibold">₱{item.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -705,7 +698,6 @@ export default function Menu() {
               <div className="sticky bottom-0 bg-gray-50 p-5 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-xl font-bold text-gray-800">Total:</span>
-                  {/* NEW GREEN COLOR FOR TOTAL */}
                   <span className="text-2xl font-bold text-emerald-600">₱{getCartTotal().toFixed(2)}</span>
                 </div>
                 <button
@@ -717,7 +709,6 @@ export default function Menu() {
                       setShowCart(false);
                       setShowCheckoutModal(true); 
                   }}
-                  // NEW GREEN GRADIENT FOR PLACE ORDER BUTTON
                   className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={cart.length === 0}
                 >
