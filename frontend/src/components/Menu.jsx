@@ -21,13 +21,16 @@ const CATEGORIES = [
   { id: 'grilled', icon: '🥩', label: 'Grilled' },
   { id: 'bestsellers', icon: '⭐', label: 'Best Sellers' },
   { id: 'seafood', icon: '🐟', label: 'Seafood' },
+  { id: 'noodles', icon: '🍜', label: 'Noodles' },
   { id: 'silog', icon: '🍳', label: 'Silog' },
   { id: 'appetizers', icon: '🍟', label: 'Appetizers' },
+  { id: 'soup', icon: '🍲', label: 'Soup' },
   { id: 'lemonade', icon: '🍋', label: 'Lemonade' },
   { id: 'smoothies', icon: '🍓', label: 'Smoothies' },
-  { id: 'buckets', icon: '🍻', label: 'Buckets' },
-  { id: 'alcohol', icon: '🥃', label: 'Alcohol' }, 
   { id: 'coffee', icon: '☕', label: 'Coffee' },
+  { id: 'alcohol', icon: '🥃', label: 'Alcohol' }, 
+  { id: 'nonalcoholic', icon: '🧃', label: 'Drinks' },
+  { id: 'buckets', icon: '🍻', label: 'Buckets' },
 ];
 
 // --- Checkout Modal Component ---
@@ -59,12 +62,10 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                     </div>
 
                     <div onSubmit={handleSubmit}>
-                        {/* Order Context */}
                         <div className="mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
                             <p className="text-lg font-semibold text-indigo-700">Type: {orderType === 'dine-in' ? `Dine In (Table: ${tableNumber})` : 'Takeout'}</p>
                         </div>
 
-                        {/* Customer Name Input */}
                         <div className="mb-4">
                             <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
                             <input
@@ -78,7 +79,6 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                             />
                         </div>
 
-                        {/* Payment Method Selection */}
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
                             <div className="flex gap-4">
@@ -107,13 +107,11 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                             </div>
                         </div>
 
-                        {/* Order Summary */}
                         <div className="flex justify-between items-center text-xl font-bold text-gray-900 border-t pt-3">
                             <span>Total:</span>
                             <span className="text-pink-600">₱{total.toFixed(2)}</span>
                         </div>
                         
-                        {/* Submit Button */}
                         <button
                             type="button"
                             onClick={handleSubmit}
@@ -151,7 +149,6 @@ export default function Menu() {
   const [orderType, setOrderType] = useState('takeout');
   const [tableNumber, setTableNumber] = useState('');
 
-  // --- Initial Data Load ---
   useEffect(() => {
     loadMenuFromSupabase();
     const savedCart = localStorage.getItem('sipnsing_cart');
@@ -160,12 +157,10 @@ export default function Menu() {
     }
   }, []);
   
-  // --- Persist Cart to Local Storage ---
   useEffect(() => {
     localStorage.setItem('sipnsing_cart', JSON.stringify(cart));
   }, [cart]);
   
-  // --- Scroll Tracking for Active Category ---
   useEffect(() => {
     const handleScroll = () => {
       const sections = CATEGORIES.map(cat => ({
@@ -188,7 +183,6 @@ export default function Menu() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  // --- Supabase Fetch Logic ---
   const loadMenuFromSupabase = async () => {
     try {
       let { data: items, error: itemsError } = await supabase
@@ -221,7 +215,6 @@ export default function Menu() {
     }
   };
 
-  // --- Cart Management Functions ---
   const addToCart = (item, option = null) => {
     const price = option?.price || item.base_price; 
     const cartItemId = `${item.id}-${option?.id || 'base'}`;
@@ -271,7 +264,6 @@ export default function Menu() {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  // --- Order Submission ---
   const handlePlaceOrder = async ({ customerName, paymentMethod }) => {
     if (cart.length === 0) return;
 
@@ -315,7 +307,6 @@ export default function Menu() {
     }
   };
 
-  // --- UI Functions ---
   const scrollToCategory = (categoryId) => {
     setActiveCategory(categoryId);
     const element = document.getElementById(categoryId);
@@ -327,11 +318,24 @@ export default function Menu() {
     }
   };
 
-  const itemsByCategory = menuItems.reduce((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = [];
-    acc[item.category].push(item);
-    return acc;
-  }, {});
+  const groupItemsByCategory = () => {
+    const grouped = {};
+    
+    menuItems.forEach(item => {
+      if (!grouped[item.category]) {
+        grouped[item.category] = {};
+      }
+      
+      const placeholder = item.image_placeholder || item.code;
+      if (!grouped[item.category][placeholder]) {
+        grouped[item.category][placeholder] = [];
+      }
+      
+      grouped[item.category][placeholder].push(item);
+    });
+    
+    return grouped;
+  };
 
   if (loading) {
     return (
@@ -341,88 +345,137 @@ export default function Menu() {
     );
   }
 
-  // --- Render Menu Items ---
-  const renderMenuItem = (item) => {
-    const standardizedCode = item.code.toUpperCase();
-    const webpUrl = `${SUPABASE_STORAGE_URL}/${standardizedCode}.webp`;
-    const jpgUrl = `${SUPABASE_STORAGE_URL}/${standardizedCode}.jpg`;
-    const placeholderUrl = `https://placehold.co/200x150/5B21B6/D8B4FE?text=${standardizedCode}`;
-
-    const hasOptions = item.options && item.options.length > 0;
+  const renderMenuGroup = (items) => {
+    const imageCode = (items[0].image_placeholder || items[0].code).toUpperCase();
+    const webpUrl = `${SUPABASE_STORAGE_URL}/${imageCode}.webp`;
+    const jpgUrl = `${SUPABASE_STORAGE_URL}/${imageCode}.jpg`;
+    
+    const aspect32Images = [
+      'L1-L6', 'D1-D6', 'SM1-SM3', 'SM4-SM6', 'SM7-SM9', 'CF1-CF7',
+      'AL1', 'WHISKEY', 'MIXED', 'NON-AL', 'BKT1', 'BKT2', 'BKT3', 'BKT4', 'BKT5'
+    ];
+    const aspect23Images = ['BKT'];
+    
+    const is32Aspect = aspect32Images.includes(imageCode);
+    const is23Aspect = aspect23Images.includes(imageCode);
+    
+    let placeholderDimensions = '200x150';
+    let aspectClass = 'aspect-[4/3]';
+    
+    if (is32Aspect) {
+      placeholderDimensions = '300x200';
+      aspectClass = 'aspect-[3/2]';
+    } else if (is23Aspect) {
+      placeholderDimensions = '200x300';
+      aspectClass = 'aspect-[2/3]';
+    }
+    
+    const placeholderUrl = `https://placehold.co/${placeholderDimensions}/5B21B6/D8B4FE?text=${imageCode}`;
+    const isGrouped = items.length > 1;
     
     return (
-      <div
-        key={item.id}
-        className="bg-purple-100 border-2 border-purple-300 rounded-xl p-5 hover:border-purple-500 hover:shadow-xl transition-all flex flex-col sm:flex-row gap-4"
-      >
-        
-        {/* Image Container */}
-        <div className="w-full sm:w-2/5 md:w-1/3 flex-shrink-0 aspect-[4/3] rounded-lg overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-[1.02]">
-            <img
-                src={webpUrl}
-                alt={item.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                    if (e.target.src.endsWith('.webp')) {
-                        e.target.src = jpgUrl; 
-                    } 
-                    else if (e.target.src.endsWith('.jpg')) {
-                        e.target.onerror = null;
-                        e.target.src = placeholderUrl;
-                    }
-                }}
-            />
+      <div className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-purple-400 hover:shadow-lg transition-all">
+        {/* Image */}
+        <div className={`w-full ${aspectClass} bg-gray-100`}>
+          <img
+            src={webpUrl}
+            alt={imageCode}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              if (e.target.src.endsWith('.webp')) {
+                e.target.src = jpgUrl;
+              } else if (e.target.src.endsWith('.jpg')) {
+                e.target.onerror = null;
+                e.target.src = placeholderUrl;
+              }
+            }}
+          />
         </div>
 
-        {/* Content and CTA */}
-        <div className="flex-1 flex flex-col">
-            <div className="flex justify-between items-start mb-2">
-                <div>
-                    <span className="text-pink-600 font-bold text-xs">{item.code}</span>
-                    <h3 className="text-xl font-bold text-gray-800">{item.name}</h3>
+        {/* Items List */}
+        <div className="p-4">
+          {items.map((item, idx) => {
+            const hasOptions = item.options && item.options.length > 0;
+            
+            return (
+              <div key={item.id} className={`${idx > 0 ? 'mt-4 pt-4 border-t border-gray-200' : ''}`}>
+                {/* Item Header - only show for grouped items or items with options */}
+                {(isGrouped || hasOptions) && (
+                  <div className="mb-2">
+                    <span className="text-purple-600 font-bold text-sm mr-2">{item.code}</span>
+                    <span className="text-gray-800 font-semibold">{item.name}</span>
                     {item.description && (
                       <p className="text-gray-600 text-sm mt-1">{item.description}</p>
                     )}
-                </div>
-            </div>
-
-            {/* Dynamic Pricing and Add to Cart Section */}
-            {hasOptions ? (
-              <div className="mt-auto space-y-2 pt-3 border-t border-purple-300">
-                {item.options.map(option => (
-                  <div key={option.id} className="flex justify-between items-center py-1">
-                    <span className="text-purple-900 font-semibold">{option.label}</span>
-                    <div className="flex items-center gap-3">
-                        <span className="text-purple-700 font-bold text-lg">₱{option.price}</span>
-                        <button
-                          onClick={() => addToCart(item, option)}
-                          className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-2 rounded-lg text-sm font-semibold hover:shadow-lg hover:scale-105 transition-all"
-                        >
-                          <Plus className='w-4 h-4' />
-                        </button>
-                    </div>
                   </div>
-                ))}
+                )}
+
+                {/* Single item without options and not grouped */}
+                {!hasOptions && !isGrouped && (
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-purple-600 font-bold text-sm mr-2">{item.code}</span>
+                      <span className="text-gray-800 font-semibold">{item.name}</span>
+                      {item.description && (
+                        <p className="text-gray-600 text-sm mt-1">{item.description}</p>
+                      )}
+                      <p className="text-purple-700 font-bold text-xl mt-2">₱{item.base_price}</p>
+                    </div>
+                    <button
+                      onClick={() => addToCart(item)}
+                      className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all whitespace-nowrap ml-4"
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                )}
+
+                {/* Options or grouped items with base price */}
+                {(hasOptions || (isGrouped && !hasOptions)) && (
+                  <div className="space-y-2">
+                    {hasOptions ? (
+                      item.options.map(option => (
+                        <div key={option.id} className="flex justify-between items-center py-2">
+                          <span className="text-gray-700">{option.label}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-purple-700 font-bold">₱{option.price}</span>
+                            <button
+                              onClick={() => addToCart(item, option)}
+                              className="bg-pink-500 text-white p-2 rounded-lg hover:bg-pink-600 transition-colors"
+                            >
+                              <Plus className='w-4 h-4' />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-700">Regular</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-purple-700 font-bold">₱{item.base_price}</span>
+                          <button
+                            onClick={() => addToCart(item)}
+                            className="bg-pink-500 text-white p-2 rounded-lg hover:bg-pink-600 transition-colors"
+                          >
+                            <Plus className='w-4 h-4' />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="flex justify-between items-center mt-auto pt-3 border-t border-purple-300">
-                <span className="text-purple-800 font-bold text-xl">₱{item.base_price}</span>
-                <button
-                  onClick={() => addToCart(item)}
-                  className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all"
-                >
-                  Add to Cart
-                </button>
-              </div>
-            )}
+            );
+          })}
         </div>
       </div>
     );
   };
+
+  const groupedItems = groupItemsByCategory();
   
-  // --- Main Render ---
   return (
-    <div className="bg-white min-h-screen text-gray-800">
+    <div className="bg-gray-50 min-h-screen text-gray-800">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-center sticky top-0 z-40 shadow-lg">
         <h1 className="text-3xl font-bold text-white mb-1">🎤 Sip & Sing Restobar</h1>
@@ -436,9 +489,9 @@ export default function Menu() {
 
       {/* Item Count Display */}
       {itemCount > 0 && (
-          <div className="bg-gray-50 text-center py-2 sticky top-[88px] z-30">
+          <div className="bg-white text-center py-2 sticky top-[88px] z-30 shadow-sm">
               <span className="text-gray-600 text-sm font-medium">
-                  {itemCount} Items Loaded
+                  {itemCount} Items Available
               </span>
           </div>
       )}
@@ -455,15 +508,15 @@ export default function Menu() {
       )}
 
       {/* Category Nav */}
-      <div className="sticky top-[120px] z-20 bg-gray-50 overflow-x-auto flex gap-2 p-3">
+      <div className="sticky top-[120px] z-20 bg-white shadow-sm overflow-x-auto flex gap-2 p-3">
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
             onClick={() => scrollToCategory(cat.id)}
             className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold transition-all ${
               activeCategory === cat.id
-                ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg'
-                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             {cat.icon} {cat.label}
@@ -474,8 +527,8 @@ export default function Menu() {
       {/* Menu Items */}
       <div className="max-w-4xl mx-auto p-4 pb-24">
         {CATEGORIES.map(category => {
-          const items = itemsByCategory[category.id] || [];
-          if (items.length === 0) return null;
+          const categoryGroups = groupedItems[category.id];
+          if (!categoryGroups || Object.keys(categoryGroups).length === 0) return null;
 
           return (
             <div key={category.id} id={category.id} className="mb-8">
@@ -485,7 +538,11 @@ export default function Menu() {
               </h2>
 
               <div className="grid gap-4">
-                {items.map(item => renderMenuItem(item))}
+                {Object.values(categoryGroups).map((itemGroup, idx) => (
+                  <div key={idx}>
+                    {renderMenuGroup(itemGroup)}
+                  </div>
+                ))}
               </div>
             </div>
           );
@@ -509,7 +566,6 @@ export default function Menu() {
       {showCart && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-end md:items-center justify-center">
           <div className="bg-white w-full md:max-w-2xl md:rounded-t-3xl md:rounded-b-3xl max-h-[90vh] overflow-y-auto">
-            {/* Cart Header */}
             <div className="sticky top-0 bg-gray-50 p-5 flex justify-between items-center border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-800">Your Order</h2>
               <button onClick={() => setShowCart(false)} className="text-gray-600">
@@ -517,7 +573,6 @@ export default function Menu() {
               </button>
             </div>
 
-            {/* Order Type Selection */}
             <div className="p-5 border-b border-gray-200">
               <div className="flex gap-2 mb-3">
                 <button
@@ -553,7 +608,6 @@ export default function Menu() {
               )}
             </div>
 
-            {/* Cart Items */}
             <div className="p-5 space-y-3">
               {cart.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">Your cart is empty</p>
@@ -591,7 +645,6 @@ export default function Menu() {
               )}
             </div>
 
-            {/* Cart Footer */}
             {cart.length > 0 && (
               <div className="sticky bottom-0 bg-gray-50 p-5 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-4">
