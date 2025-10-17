@@ -62,8 +62,8 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                     </div>
 
                     <div onSubmit={handleSubmit}>
-                        <div className="mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                            <p className="text-lg font-semibold text-indigo-700">Type: {orderType === 'dine-in' ? `Dine In (Table: ${tableNumber})` : 'Takeout'}</p>
+                        <div className="mb-4 bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                            <p className="text-lg font-semibold text-emerald-700">Type: {orderType === 'dine-in' ? `Dine In (Table: ${tableNumber})` : 'Takeout'}</p>
                         </div>
 
                         <div className="mb-4">
@@ -73,7 +73,7 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                                 type="text"
                                 value={customerName}
                                 onChange={(e) => setCustomerName(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
                                 placeholder="e.g., Jane Smith"
                                 required
                             />
@@ -89,7 +89,8 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                                         value="Cash"
                                         checked={paymentMethod === 'Cash'}
                                         onChange={() => setPaymentMethod('Cash')}
-                                        className="form-radio text-pink-600 h-5 w-5"
+                                        // NEW GREEN COLOR
+                                        className="form-radio text-emerald-600 h-5 w-5"
                                     />
                                     <span className="text-gray-700">Cash</span>
                                 </label>
@@ -100,7 +101,8 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
                                         value="Card"
                                         checked={paymentMethod === 'Card'}
                                         onChange={() => setPaymentMethod('Card')}
-                                        className="form-radio text-pink-600 h-5 w-5"
+                                        // NEW GREEN COLOR
+                                        className="form-radio text-emerald-600 h-5 w-5"
                                     />
                                     <span className="text-gray-700">Card (Debit/Credit)</span>
                                 </label>
@@ -109,14 +111,19 @@ const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }
 
                         <div className="flex justify-between items-center text-xl font-bold text-gray-900 border-t pt-3">
                             <span>Total:</span>
-                            <span className="text-pink-600">₱{total.toFixed(2)}</span>
+                            {/* NEW GREEN COLOR */}
+                            <span className="text-emerald-600">₱{total.toFixed(2)}</span>
                         </div>
                         
                         <button
                             type="button"
                             onClick={handleSubmit}
                             className={`w-full mt-6 py-3 rounded-xl font-bold text-white transition-all flex items-center justify-center gap-2 
-                                ${isSubmitting ? 'bg-gray-400' : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'}`}
+                                ${isSubmitting 
+                                    ? 'bg-gray-400' 
+                                    // NEW GREEN GRADIENT
+                                    : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'
+                                }`}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (
@@ -188,9 +195,9 @@ export default function Menu() {
       let { data: items, error: itemsError } = await supabase
         .from('menu_items')
         .select(`*, options:menu_item_options (id, label, price, sort_order), special_notes`)
-        .eq('available', true)  // Filter unavailable/removed
+        .eq('available', true)
         .order('category', { ascending: true })
-        .order('sort_order', { ascending: true })  // Use new sort
+        .order('sort_order', { ascending: true })
         .order('code', { ascending: true });
 
       if (itemsError) throw itemsError;
@@ -227,7 +234,7 @@ export default function Menu() {
       code: item.code,
       name: item.name,
       option_id: option?.id || null,
-      option_label: option?.label || 'Regular',
+      option_label: option?.label || null, 
       price: parseFloat(price),
       quantity: 1,
     };
@@ -278,8 +285,8 @@ export default function Menu() {
                 item_id: item.item_id,
                 code: item.code,
                 name: item.name,
-                option: item.option_label,
-                option_id: item.option_id,  // Added to jsonb
+                option: item.option_label, 
+                option_id: item.option_id,
                 price: item.price,
                 quantity: item.quantity,
             })),
@@ -342,7 +349,7 @@ export default function Menu() {
 
   if (loading) {
     return (
-      <div className="bg-white min-h-screen flex items-center justify-center">
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-gray-800 text-xl">Loading menu...</div>
       </div>
     );
@@ -356,7 +363,7 @@ export default function Menu() {
     const aspect32Images = [
       'L1-L6', 'D1-D6', 'SM1-SM3', 'SM4-SM6', 'SM7-SM9', 'CF1-CF7',
       'AL1', 'WHISKEY', 'MIXED', 'NON-AL', 'BKT1', 'BKT2', 'BKT3', 'BKT4', 'BKT5',
-      'BEERS', 'VODKA', 'RHUM', 'GIN'  // Added 4:3/3:2 per spec
+      'BEERS', 'VODKA', 'RHUM', 'GIN'
     ];
     const aspect23Images = ['BKT'];
     
@@ -374,11 +381,11 @@ export default function Menu() {
       aspectClass = 'aspect-[2/3]';
     }
     
-    const placeholderUrl = `https://placehold.co/${placeholderDimensions}/5B21B6/D8B4FE?text=${imageCode}`;
+    const placeholderUrl = `https://placehold.co/${placeholderDimensions}/22c55e/ffffff?text=${imageCode}`; // Green placeholder
     const isGrouped = items.length > 1;
     
     return (
-      <div className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-purple-400 hover:shadow-lg transition-all">
+      <div className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:border-emerald-400 hover:shadow-lg transition-all">
         {/* Image */}
         <div className={`w-full ${aspectClass} bg-gray-100`}>
           <img
@@ -406,7 +413,8 @@ export default function Menu() {
                 {/* Item Header - only show for grouped items or items with options */}
                 {(isGrouped || hasOptions) && (
                   <div className="mb-2">
-                    <span className="text-purple-600 font-bold text-sm mr-2">{item.code}</span>
+                    {/* NEW GREEN COLOR ACCENT */}
+                    <span className="text-green-600 font-bold text-sm mr-2">{item.code}</span>
                     <span className="text-gray-800 font-semibold">{item.name}</span>
                     {item.description && (
                       <p className="text-gray-600 text-sm mt-1">{item.description}</p>
@@ -421,7 +429,8 @@ export default function Menu() {
                 {!hasOptions && !isGrouped && (
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-purple-600 font-bold text-sm mr-2">{item.code}</span>
+                      {/* NEW GREEN COLOR ACCENT */}
+                      <span className="text-green-600 font-bold text-sm mr-2">{item.code}</span>
                       <span className="text-gray-800 font-semibold">{item.name}</span>
                       {item.description && (
                         <p className="text-gray-600 text-sm mt-1">{item.description}</p>
@@ -429,11 +438,13 @@ export default function Menu() {
                       {item.special_notes && (
                         <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
                       )}
-                      <p className="text-purple-700 font-bold text-xl mt-2">₱{item.base_price}</p>
+                      {/* NEW GREEN COLOR ACCENT */}
+                      <p className="text-emerald-700 font-bold text-xl mt-2">₱{item.base_price}</p>
                     </div>
                     <button
                       onClick={() => addToCart(item)}
-                      className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all whitespace-nowrap ml-4"
+                      // NEW GREEN GRADIENT FOR BUTTON
+                      className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all whitespace-nowrap ml-4"
                     >
                       Add to Cart
                     </button>
@@ -448,10 +459,12 @@ export default function Menu() {
                         <div key={option.id} className="flex justify-between items-center py-2">
                           <span className="text-gray-700">{option.label}</span>
                           <div className="flex items-center gap-3">
-                            <span className="text-purple-700 font-bold">₱{option.price}</span>
+                            {/* NEW GREEN COLOR ACCENT */}
+                            <span className="text-emerald-700 font-bold">₱{option.price}</span>
                             <button
                               onClick={() => addToCart(item, option)}
-                              className="bg-pink-500 text-white p-2 rounded-lg hover:bg-pink-600 transition-colors"
+                              // NEW GREEN COLOR ACCENT
+                              className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors"
                             >
                               <Plus className='w-4 h-4' />
                             </button>
@@ -460,12 +473,14 @@ export default function Menu() {
                       ))
                     ) : (
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-700">Regular</span>
+                        <span className="text-gray-800 font-semibold">{item.name}</span> 
                         <div className="flex items-center gap-3">
-                          <span className="text-purple-700 font-bold">₱{item.base_price}</span>
+                          {/* NEW GREEN COLOR ACCENT */}
+                          <span className="text-emerald-700 font-bold">₱{item.base_price}</span>
                           <button
                             onClick={() => addToCart(item)}
-                            className="bg-pink-500 text-white p-2 rounded-lg hover:bg-pink-600 transition-colors"
+                            // NEW GREEN COLOR ACCENT
+                            className="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition-colors"
                           >
                             <Plus className='w-4 h-4' />
                           </button>
@@ -486,20 +501,45 @@ export default function Menu() {
   
   return (
     <div className="bg-gray-50 min-h-screen text-gray-800">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-center sticky top-0 z-40 shadow-lg">
-        <h1 className="text-3xl font-bold text-white mb-1">Sip & Sing</h1>
-        <p className="text-purple-100 text-sm">Delicious Food • Refreshing Drinks • Great Vibes</p>
+      
+      {/* Header (Top Bar) - NEW GREEN THEME AND LEFT ALIGNMENT */}
+      <div className="bg-gradient-to-r from-emerald-600 to-green-800 p-5 sticky top-0 z-40 shadow-xl">
+        <div className="flex items-center justify-start gap-4"> {/* Use justify-start to align left */}
+          {/* Logo Container */}
+          <img 
+            src={`${SUPABASE_STORAGE_URL}/logo.webp`}
+            alt="Sip & Sing Logo" 
+            className="h-10 w-10 object-contain"
+            onError={(e) => {
+              e.target.src = `${SUPABASE_STORAGE_URL}/logo.jpg`;
+              e.target.onerror = () => e.target.style.display = 'none';
+            }}
+          />
+          
+          {/* Text Container - Aligned left next to logo */}
+          <div>
+            <h1 className="text-3xl font-extrabold text-white leading-none tracking-tight">
+                SIP & SING
+            </h1>
+            <p className="text-emerald-100 text-sm mt-0.5">
+                Delicious Food • Refreshing Drinks • Great Vibes
+            </p>
+          </div>
+        </div>
+        
+        {/* Table Number Overlay */}
         {tableNumber && orderType === 'dine-in' && (
-          <p className="text-yellow-300 text-base mt-2">
-            Ordering for Table {tableNumber}
-          </p>
+          <div className="absolute top-0 right-0 p-3 bg-white/20 rounded-bl-lg backdrop-blur-sm">
+            <p className="text-yellow-300 text-sm font-semibold">
+              TABLE {tableNumber}
+            </p>
+          </div>
         )}
       </div>
 
-      {/* Item Count Display */}
+      {/* Item Count Display - NEW GREEN ACCENT */}
       {itemCount > 0 && (
-          <div className="bg-white text-center py-2 sticky top-[88px] z-30 shadow-sm">
+          <div className="bg-white/70 backdrop-blur-sm text-center py-2 sticky top-[108px] z-30 shadow-sm">
               <span className="text-gray-600 text-sm font-medium">
                   {itemCount} Items Available
               </span>
@@ -508,7 +548,7 @@ export default function Menu() {
 
       {/* Success Banner */}
       {orderConfirmed && (
-        <div className="bg-green-600 p-3 text-center sticky top-[120px] z-30 flex justify-center items-center gap-3">
+        <div className="bg-emerald-600 p-3 text-center sticky top-[140px] z-30 flex justify-center items-center gap-3">
           <Check className="w-5 h-5 text-white" />
           <span className="font-semibold text-white">Order placed successfully! Staff notified.</span>
           <button onClick={() => setOrderConfirmed(false)} className="text-white opacity-70 hover:opacity-100 ml-auto">
@@ -517,15 +557,16 @@ export default function Menu() {
         </div>
       )}
 
-      {/* Category Nav */}
-      <div className="sticky top-[120px] z-20 bg-white shadow-sm overflow-x-auto flex gap-2 p-3">
+      {/* Category Nav - NEW TRANSPARENCY AND GREEN THEME */}
+      <div className="sticky top-[140px] z-20 bg-white/90 backdrop-blur-md shadow-lg overflow-x-auto flex gap-2 p-3 border-b border-gray-200">
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
             onClick={() => scrollToCategory(cat.id)}
             className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold transition-all ${
               activeCategory === cat.id
-                ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md'
+                // NEW GREEN GRADIENT FOR ACTIVE BUTTON
+                ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -562,7 +603,8 @@ export default function Menu() {
       {/* Cart Button */}
       <button
         onClick={() => setShowCart(true)}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-pink-500 to-purple-500 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-30"
+        // NEW GREEN GRADIENT FOR CART BUTTON
+        className="fixed bottom-6 right-6 bg-gradient-to-r from-emerald-500 to-green-600 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform z-30"
       >
         <ShoppingCart className="w-6 h-6" />
         {cart.length > 0 && (
@@ -589,7 +631,8 @@ export default function Menu() {
                   onClick={() => setOrderType('dine-in')}
                   className={`flex-1 py-3 rounded-lg font-semibold ${
                     orderType === 'dine-in'
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
+                      // NEW GREEN GRADIENT FOR DINE IN BUTTON
+                      ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white'
                       : 'bg-gray-100 text-gray-700'
                   }`}
                 >
@@ -599,7 +642,8 @@ export default function Menu() {
                   onClick={() => setOrderType('takeout')}
                   className={`flex-1 py-3 rounded-lg font-semibold ${
                     orderType === 'takeout'
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
+                      // NEW GREEN GRADIENT FOR TAKEOUT BUTTON
+                      ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white'
                       : 'bg-gray-100 text-gray-700'
                   }`}
                 >
@@ -613,7 +657,8 @@ export default function Menu() {
                   placeholder="Table Number (e.g. A2)"
                   value={tableNumber}
                   onChange={(e) => setTableNumber(e.target.value)}
-                  className="w-full p-3 rounded-lg bg-gray-100 text-gray-800 border border-gray-300 focus:border-pink-500 focus:outline-none"
+                  // NEW GREEN FOCUS RING
+                  className="w-full p-3 rounded-lg bg-gray-100 text-gray-800 border border-gray-300 focus:border-emerald-500 focus:outline-none"
                 />
               )}
             </div>
@@ -626,8 +671,9 @@ export default function Menu() {
                   <div key={item.id} className="bg-gray-50 rounded-lg p-4 flex justify-between items-center">
                     <div className="flex-1">
                       <h4 className="font-bold text-gray-800">{item.name}</h4>
-                      <p className="text-gray-600 text-sm">{item.option_label}</p>
-                      <p className="text-green-600 font-semibold">₱{item.price.toFixed(2)}</p>
+                      {item.option_label && <p className="text-gray-600 text-sm">{item.option_label}</p>}
+                      {/* Using a darker green for price to stand out */}
+                      <p className="text-green-700 font-semibold">₱{item.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
@@ -659,7 +705,8 @@ export default function Menu() {
               <div className="sticky bottom-0 bg-gray-50 p-5 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-xl font-bold text-gray-800">Total:</span>
-                  <span className="text-2xl font-bold text-green-600">₱{getCartTotal().toFixed(2)}</span>
+                  {/* NEW GREEN COLOR FOR TOTAL */}
+                  <span className="text-2xl font-bold text-emerald-600">₱{getCartTotal().toFixed(2)}</span>
                 </div>
                 <button
                   onClick={() => {
@@ -668,9 +715,10 @@ export default function Menu() {
                           return;
                       }
                       setShowCart(false);
-                      setShowCheckoutModal(true);
+                      setShowCheckoutModal(true); 
                   }}
-                  className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  // NEW GREEN GRADIENT FOR PLACE ORDER BUTTON
+                  className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={cart.length === 0}
                 >
                   Place Order

@@ -1,40 +1,4 @@
-import { ShoppingCart, Plus, Minus, X, Check } from 'lucide-react';// Supabase client configurationimport { createClient } from '@supabase/supabase-js';// NOTE: Vite automatically exposes environment variables prefixed with VITE_const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;const supabase = createClient(  VITE_SUPABASE_URL,  VITE_SUPABASE_ANON_KEY);// --- Image Configuration ---const SUPABASE_STORAGE_URL = `${VITE_SUPABASE_URL}/storage/v1/object/public/menu-images`;// Category configconst CATEGORIES = [  { id: 'grilled', icon: '🥩', label: 'Grilled' },  { id: 'bestsellers', icon: '⭐', label: 'Best Sellers' },  { id: 'seafood', icon: '🐟', label: 'Seafood' },  { id: 'noodles', icon: '🍜', label: 'Noodles' },  { id: 'silog', icon: '🍳', label: 'Silog' },  { id: 'appetizers', icon: '🍟', label: 'Appetizers' },  { id: 'soup', icon: '🍲', label: 'Soup' },  { id: 'lemonade', icon: '🍋', label: 'Lemonade' },  { id: 'smoothies', icon: '🍓', label: 'Smoothies' },  { id: 'coffee', icon: '☕', label: 'Coffee' },  { id: 'alcohol', icon: '🥃', label: 'Alcohol' },   { id: 'nonalcoholic', icon: '🧃', label: 'Drinks' },  { id: 'buckets', icon: '🍻', label: 'Buckets' },];// --- Checkout Modal Component ---const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }) => {    const [customerName, setCustomerName] = useState('');    const [paymentMethod, setPaymentMethod] = useState('Cash');    const [isSubmitting, setIsSubmitting] = useState(false);    const handleSubmit = async (e) => {        e.preventDefault();        if ((orderType === 'dine-in' && !tableNumber) || !customerName.trim()) {            alert('Please enter your name' + (orderType === 'dine-in' ? ' and table number' : ''));            return;        }        setIsSubmitting(true);        await onSubmitOrder({ customerName, paymentMethod });        setIsSubmitting(false);
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-                <div className="p-6">
-                    <div className="flex justify-between items-center mb-4 border-b pb-3">
-                        <h2 className="text-2xl font-bold text-gray-800">Confirm Order</h2>
-                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-
-                    <div onSubmit={handleSubmit}>
-                        <div className="mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                            <p className="text-lg font-semibold text-indigo-700">Type: {orderType === 'dine-in' ? `Dine In (Table: ${tableNumber})` : 'Takeout'}</p>
-                        </div>
-
-                        <div className="mb-4">
-                            <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-                            <input
-                                id="customerName"
-                                type="text"
-                                value={customerName}
-                                onChange={(e) => setCustomerName(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"
-                                placeholder="e.g., Jane Smith"
-                                required
-                            />
-                        </div>
-
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input
+import { ShoppingCart, Plus, Minus, X, Check } from 'lucide-react';// Supabase client configurationimport { createClient } from '@supabase/supabase-js';// NOTE: Vite automatically exposes environment variables prefixed with VITE_const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;const supabase = createClient(  VITE_SUPABASE_URL,  VITE_SUPABASE_ANON_KEY);// --- Image Configuration ---const SUPABASE_STORAGE_URL = `${VITE_SUPABASE_URL}/storage/v1/object/public/menu-images`;// Category configconst CATEGORIES = [  { id: 'grilled', icon: '🥩', label: 'Grilled' },  { id: 'bestsellers', icon: '⭐', label: 'Best Sellers' },  { id: 'seafood', icon: '🐟', label: 'Seafood' },  { id: 'noodles', icon: '🍜', label: 'Noodles' },  { id: 'silog', icon: '🍳', label: 'Silog' },  { id: 'appetizers', icon: '🍟', label: 'Appetizers' },  { id: 'soup', icon: '🍲', label: 'Soup' },  { id: 'lemonade', icon: '🍋', label: 'Lemonade' },  { id: 'smoothies', icon: '🍓', label: 'Smoothies' },  { id: 'coffee', icon: '☕', label: 'Coffee' },  { id: 'alcohol', icon: '🥃', label: 'Alcohol' },   { id: 'nonalcoholic', icon: '🧃', label: 'Drinks' },  { id: 'buckets', icon: '🍻', label: 'Buckets' },];// --- Checkout Modal Component ---const CheckoutModal = ({ total, orderType, tableNumber, onClose, onSubmitOrder }) => {    const [customerName, setCustomerName] = useState('');    const [paymentMethod, setPaymentMethod] = useState('Cash');    const [isSubmitting, setIsSubmitting] = useState(false);    const handleSubmit = async (e) => {        e.preventDefault();        if ((orderType === 'dine-in' && !tableNumber) || !customerName.trim()) {            alert('Please enter your name' + (orderType === 'dine-in' ? ' and table number' : ''));            return;        }        setIsSubmitting(true);        await onSubmitOrder({ customerName, paymentMethod });        setIsSubmitting(false);    };    return (        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">                <div className="p-6">                    <div className="flex justify-between items-center mb-4 border-b pb-3">                        <h2 className="text-2xl font-bold text-gray-800">Confirm Order</h2>                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">                            <X className="w-6 h-6" />                        </button>                    </div>                    <div onSubmit={handleSubmit}>                        <div className="mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">                            <p className="text-lg font-semibold text-indigo-700">Type: {orderType === 'dine-in' ? `Dine In (Table: ${tableNumber})` : 'Takeout'}</p>                        </div>                        <div className="mb-4">                            <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>                            <input                                id="customerName"                                type="text"                                value={customerName}                                onChange={(e) => setCustomerName(e.target.value)}                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-pink-500 focus:border-pink-500"                                placeholder="e.g., Jane Smith"                                required                            />                        </div>                        <div className="mb-6">                            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>                            <div className="flex gap-4">                                <label className="flex items-center space-x-2 cursor-pointer">                                    <input
                                         type="radio"
                                         name="payment"
                                         value="Cash"
@@ -138,8 +102,10 @@ export default function Menu() {
     try {
       let { data: items, error: itemsError } = await supabase
         .from('menu_items')
-        .select(`*, options:menu_item_options (id, label, price, sort_order)`)
+        .select(`*, options:menu_item_options (id, label, price, sort_order), special_notes`)
+        .eq('available', true)
         .order('category', { ascending: true })
+        .order('sort_order', { ascending: true })
         .order('code', { ascending: true });
 
       if (itemsError) throw itemsError;
@@ -228,6 +194,7 @@ export default function Menu() {
                 code: item.code,
                 name: item.name,
                 option: item.option_label,
+                option_id: item.option_id,
                 price: item.price,
                 quantity: item.quantity,
             })),
@@ -303,7 +270,8 @@ export default function Menu() {
     
     const aspect32Images = [
       'L1-L6', 'D1-D6', 'SM1-SM3', 'SM4-SM6', 'SM7-SM9', 'CF1-CF7',
-      'AL1', 'WHISKEY', 'MIXED', 'NON-AL', 'BKT1', 'BKT2', 'BKT3', 'BKT4', 'BKT5'
+      'AL1', 'WHISKEY', 'MIXED', 'NON-AL', 'BKT1', 'BKT2', 'BKT3', 'BKT4', 'BKT5',
+      'BEERS', 'VODKA', 'RHUM', 'GIN'
     ];
     const aspect23Images = ['BKT'];
     
@@ -358,6 +326,9 @@ export default function Menu() {
                     {item.description && (
                       <p className="text-gray-600 text-sm mt-1">{item.description}</p>
                     )}
+                    {item.special_notes && (
+                      <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
+                    )}
                   </div>
                 )}
 
@@ -369,6 +340,9 @@ export default function Menu() {
                       <span className="text-gray-800 font-semibold">{item.name}</span>
                       {item.description && (
                         <p className="text-gray-600 text-sm mt-1">{item.description}</p>
+                      )}
+                      {item.special_notes && (
+                        <p className="text-sm italic text-red-600 mt-1">{item.special_notes}</p>
                       )}
                       <p className="text-purple-700 font-bold text-xl mt-2">₱{item.base_price}</p>
                     </div>
@@ -428,11 +402,22 @@ export default function Menu() {
   return (
     <div className="bg-gray-50 min-h-screen text-gray-800">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-center sticky top-0 z-40 shadow-lg">
-        <h1 className="text-3xl font-bold text-white mb-1">🎤 Sip & Sing Restobar</h1>
-        <p className="text-purple-100 text-sm">Delicious Food • Refreshing Drinks • Great Vibes</p>
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 sticky top-0 z-40 shadow-lg">
+        <div className="flex items-center justify-center gap-3 mb-1">
+          <img 
+            src={`${SUPABASE_STORAGE_URL}/logo.webp`}
+            alt="Sip & Sing Logo" 
+            className="h-10 w-10 object-contain"
+            onError={(e) => {
+              e.target.src = `${SUPABASE_STORAGE_URL}/logo.jpg`;
+              e.target.onerror = () => e.target.style.display = 'none';
+            }}
+          />
+          <h1 className="text-3xl font-bold text-white">Sip & Sing</h1>
+        </div>
+        <p className="text-purple-100 text-sm text-center">Delicious Food • Refreshing Drinks • Great Vibes</p>
         {tableNumber && orderType === 'dine-in' && (
-          <p className="text-yellow-300 text-base mt-2">
+          <p className="text-yellow-300 text-base mt-2 text-center">
             Ordering for Table {tableNumber}
           </p>
         )}
@@ -609,7 +594,7 @@ export default function Menu() {
                           return;
                       }
                       setShowCart(false);
-                      setShowCheckoutModal(true);
+                      setShowCheckoutModal(true); // <-- This line connects the Place Order button to the Checkout Modal
                   }}
                   className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={cart.length === 0}
@@ -634,3 +619,4 @@ export default function Menu() {
       )}
     </div>
   );
+}
