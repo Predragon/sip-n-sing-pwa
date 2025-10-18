@@ -357,19 +357,25 @@ export default function Menu() {
     const jpgUrl = `${SUPABASE_STORAGE_URL}/${imageCode}.jpg`;
     
     // --- Aspect Ratio Logic based on Specification ---
+    const aspect19_6Images = ['G1', 'G2', 'G3', 'G4']; // ADDED: New 19:6 aspect ratio
     const aspect32Images = [
       'L1-L6', 'D1-D6', 'SM1-SM3', 'SM4-SM6', 'SM7-SM9', 'CF1-CF7',
       'AL1', 'WHISKEY', 'MIXED', 'NON-AL', 'BKT1', 'BKT2', 'BKT3', 'BKT4', 'BKT5',
     ];
     const aspect23Images = ['BKT'];
     
+    const is19_6Aspect = aspect19_6Images.includes(imageCode); // New check
     const is32Aspect = aspect32Images.includes(imageCode);
     const is23Aspect = aspect23Images.includes(imageCode);
     
     let placeholderDimensions = '400x300'; // Default 4:3
     let aspectClass = 'aspect-[4/3]';
     
-    if (is32Aspect) {
+    if (is19_6Aspect) {
+        // NEW LOGIC for G1-G4
+        placeholderDimensions = '570x180'; // 19:6 aspect ratio (19 * 30 = 570, 6 * 30 = 180)
+        aspectClass = 'aspect-[19/6]'; 
+    } else if (is32Aspect) {
       placeholderDimensions = '450x300';
       aspectClass = 'aspect-[3/2]';
     } else if (is23Aspect) {
